@@ -1,11 +1,11 @@
-- Sky projected into a plane (pinhole camera), or using "angular coordinates"
-- Flux maps: angular resolution. Are they calculated by integrating theta->theta+res, phi->phi+res, or pixel?
-- How to consider the atmosphere? fixed alpha and width?
+# Execution
 
-- Report format
+Run the user interface via the command:
 
+`python3 src/app.py`
 
-Suppositions:
-- Source sphere of uniform brightness and isotropic
+Default parameters can be changed on `in/config.yaml`
 
-- Attribution: Icon made by srip from www.flaticon.com
+# Attribution
+
+- Icon made by srip from www.flaticon.com
