@@ -1,0 +1,27 @@
+
+star:
+  name: Sun
+  params:
+    distance: 1.496e+11 # m
+    radius: 6.957e+9 # m # 10 solar radii
+    temperature: 5778 # m
+
+planet:
+  name: Earth
+  params:
+    radius: 6.371e+6 # m
+    rotation_period: 86400 # s
+    tilt: 23.4 # degrees
+    season: 0.5 # 0 to 4
+  orbit:
+
+observer:
+  latitude: 10 #40
+  longitude: -20
+
+camera:
+  focal_length: 35.e-3 # m
+  pixel_size: 8.e-5 # m
+  view_angle: 40 # degrees
+  near_clipping_distance: 1 # m
+  frequency_band: [400.0e+9, 790.0e+9] # Hz
