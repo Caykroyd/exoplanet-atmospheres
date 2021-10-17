@@ -182,7 +182,7 @@ def plot_star_trajectory_on_canvas(fig, ax, scene):
     time, points = data['time'], data['trajectory']
 
     X, Y, Z = np.array([*zip(*points)])
-    print(X)
+    
     X, Y = cam.to_canvas((X,Y,Z))
 
     ax.set_title('Trajectory of the star as seen by observer')
