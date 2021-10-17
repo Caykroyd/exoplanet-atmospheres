@@ -1,5 +1,5 @@
 
-from PyQt5.QtWidgets import QWidget, QLineEdit, QSlider
+from PyQt5.QtWidgets import QWidget, QLineEdit, QSlider, QHBoxLayout
 from PyQt5 import QtGui
 from PyQt5.QtGui import QDoubleValidator
 import numpy as np
@@ -58,6 +58,31 @@ class EditBox(QLineEdit):
             color = '#f6989d' # red
         self.setStyleSheet('QLineEdit {{ background-color: {} }}'.format(color)) # change colour for feedback
 
+class FloatField(EditBox):
+    def __init__(self, validator_range, getter, setter, callback):
+        super().__init__(DoubleValidator(*validator_range), float, getter, setter, callback)
+
+class RangeField(WidgetGroup):
+    def __init__(self, validator_range, getter, setter, callback, scale = 1):
+        self.scale = scale
+        field0 = FloatField(validator_range, *self.single_property(getter, setter, 0), callback)
+        field1 = FloatField(validator_range, *self.single_property(getter, setter, 1), callback)
+        super().__init__(QHBoxLayout(),[field0, field1])
+
+    def single_property(self, getter, setter, i):
+        scale = self.scale
+        _val = getter()
+        print('Got',_val)
+        def getter_wrapper(getter, i):
+            _val = getter()
+            return _val[i]*scale
+        def setter_wrapper(x, setter, i):
+            _val[i] = x/scale
+            setter(_val)
+            print(_val)
+        getter_i = lambda : getter_wrapper(getter, i)
+        setter_i = lambda val : setter_wrapper(val, setter, i)
+        return getter_i, setter_i
 
 class Slider(QSlider):
 

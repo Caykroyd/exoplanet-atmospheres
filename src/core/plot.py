@@ -182,14 +182,21 @@ def plot_star_trajectory_on_canvas(fig, ax, scene):
     time, points = data['time'], data['trajectory']
 
     X, Y, Z = np.array([*zip(*points)])
+    print(X)
     X, Y = cam.to_canvas((X,Y,Z))
 
     ax.set_title('Trajectory of the star as seen by observer')
-    ax.plot(X, Y, linewidth=2)
-    range = cam.canvas_width/2
+    ax.plot(X, Y, linewidth=2, linestyle='dotted', color='k')
 
-    ax.set_xlim([-range, range])
-    ax.set_ylim([-range, range])
+    N = len(X)
+    dN = len(X) // 3
+    for n in range(dN, N-1, dN+1):
+        ax.arrow(X[n], Y[n], X[n]-X[n-dN//8], Y[n]-Y[n-dN//8], head_width=3, color='k')
+
+    lim = cam.canvas_width/2
+
+    ax.set_xlim([-lim, lim])
+    ax.set_ylim([-lim, lim])
     ax.set_xlabel('X [pixels]')
     ax.set_ylabel('Y [pixels]')
 
@@ -199,7 +206,7 @@ def plot_spectrum(fig, ax, scene, range, res=10**3):
     # ray = axis #cam.transform.local_to_global_coords(axis)
     hit = True #ray_intersects_sphere(cam.transform.position, ray, star.transform.position, star.radius)
 
-    freq = np.linspace(*range, res)
+    freq = np.geomspace(*range, res)
 
     if hit:
         B = star.spectrum(freq)
@@ -207,28 +214,46 @@ def plot_spectrum(fig, ax, scene, range, res=10**3):
         B = np.zeros_like(freq)
         print('Didnt intersect')
 
+    scale = 1e12
+    B = B*scale
+
     # plt.title(r'Spectrum along axis {}'.format(tuple(axis)))
     ax.set_title('Spectrum along star-planet axis')
-    ax.plot(freq, B)
+    ax.plot(freq, B, linestyle='dotted', c='k')
     ax.set_xscale('log')
-    ax.set_xlabel(r'$\nu [Hz]$')
-    ax.set_ylabel(r'$I_\nu []$')
+    ax.set_yscale('log')
+    ax.set_xlabel(r'$\nu \quad [Hz]$')
+    ax.set_ylabel(r'$I_\nu \quad [kW \: sr^{-1} \: m^{-2} \: nm^{-1}]$')
 
+    freq_min, freq_max = cam.frequency_band
+    band = (freq >= freq_min) & (freq <= freq_max)
+    ax.fill_between(freq, B, where=band, color='r')
 
-def plot_fluxmap(fig, ax, scene):
-    cam, planet, star = itemgetter('cam', 'planet', 'star')(scene.objs)
+def fluxmap_plotter():
+    setup = True # define the closure
 
-    def intensity(x, y, z):
-        B = cam.band_integrate(star.spectrum)
-        d = star.transform.position - cam.transform.position
+    def plot_fluxmap(fig, ax, scene):
+        cam, planet, star = itemgetter('cam', 'planet', 'star')(scene.objs)
 
-        print(np.max(np.sqrt(y**2 + z**2) / np.abs(x)))
-        return np.where( np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius, B, 0)
+        def intensity(x, y, z):
+            B = cam.band_integrate(star.spectrum)
+            d = star.transform.position - cam.transform.position
 
-    F = cam.capture(intensity)
+            return np.where( np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius, B, 0)
 
-    ax.set_title(r'Flux at observer position [$W m^{-2}$]')
-    ax.imshow(F,cmap='gray',vmin=0)
-    ax.set_xlabel('X [px]')
-    ax.set_ylabel('Y [px]')
-    # fig.colorbar()
+        F = cam.capture(intensity)
+
+        scale = 1e6
+        F *= scale
+
+        ax.set_title(r'Flux seen by camera [$W \: mm^{-2}$]')
+        cmap = ax.imshow(F,cmap='gray',vmin=0)
+        ax.set_xlabel('X [px]')
+        ax.set_ylabel('Y [px]')
+
+        nonlocal setup
+        if setup:
+            fig.colorbar(cmap)
+            setup = False
+
+    return plot_fluxmap

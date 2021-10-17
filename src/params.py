@@ -19,7 +19,12 @@ class SceneBuilder:
     def set(self, obj : str, attr : str, value):
         setattr(self.scene.objs[obj], attr, value)
 
-    def get_property(self, obj : str, attr : str, scale : float = 1):
+    def get_property(self, obj : str, attr : str):
+        getter = lambda : self.get(obj, attr)
+        setter = lambda val : self.set(obj, attr, val)
+        return getter, setter
+
+    def get_float_property(self, obj : str, attr : str, scale : float = 1):
         getter = lambda : self.get(obj, attr) * scale
         setter = lambda val : self.set(obj, attr, val / scale)
         return getter, setter

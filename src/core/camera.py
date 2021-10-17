@@ -101,15 +101,15 @@ class Camera():
     def calculate_vignetting(self, x_c, y_c):
 
         ds = self.pixel_size
-        x0, x1 = x_c-ds/2, x_c+ds/2
-        y0, y1 = y_c-ds/2, y_c+ds/2
+        # x0, x1 = x_c-ds/2, x_c+ds/2
+        # y0, y1 = y_c-ds/2, y_c+ds/2
 
         integrand = lambda x, y: \
             1/np.sqrt(1+x**2)*(np.arctan(x*y / np.sqrt(y**2+1)) - np.arctan(y * np.sqrt(x**2+1))) \
             + np.arcsinh(y) + y * np.log(x + np.sqrt(1 + x**2 + y**2)) - y
 
-        return integrand(x1,y1) + integrand(x0,y0) - integrand(x0,y1) - integrand(x1,y0)
-
+        # return integrand(x1,y1) + integrand(x0,y0) - integrand(x0,y1) - integrand(x1,y0)
+        return ds**2 / np.sqrt(x_c**2 + y_c**2 + self.focal_length**2) / self.focal_length
 
     def capture(self, I):
 

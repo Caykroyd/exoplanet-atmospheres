@@ -6,7 +6,7 @@ from PyQt5.QtGui import QIcon, QFont
 
 from qt.tabs import Tabbar, Tab
 from qt.canvas import PyplotCanvas
-from qt.widget import WidgetGroup, EditBox, Slider, DoubleValidator
+from qt.widget import WidgetGroup, Slider, FloatField, RangeField
 
 from PyQt5.QtGui import QIntValidator,QFont
 
@@ -54,14 +54,14 @@ class SetupTab(Tab):
 
         subtitle1 = QLabel('Planetary')
         subtitle1.setFont(QFont("Arial", weight=QFont.Bold))
-        tilt   = EditBox(DoubleValidator(-90,90,2), float, *builder.get_property('planet', 'tilt'), self.refresh)
+        tilt   = FloatField((-90,90,2), *builder.get_property('planet', 'tilt'), self.refresh)
         season = Slider(QtCore.Qt.Horizontal, (0,4,0.01), *builder.get_property('planet', 'season'), self.refresh)
 
         subtitle2 = QLabel('Observer')
         subtitle2.setFont(QFont("Arial", weight=QFont.Bold))
 
-        latitude  = EditBox(DoubleValidator(-90.,90.,2), float, *builder.get_property('observer', 'latitude'), self.refresh)
-        longitude = EditBox(DoubleValidator(-180,180,2), float, *builder.get_property('observer', 'longitude'), self.refresh)
+        latitude  = FloatField((-90.,90.,2), *builder.get_property('observer', 'latitude'), self.refresh)
+        longitude = FloatField((-180,180,2), *builder.get_property('observer', 'longitude'), self.refresh)
 
         self.sidebar = WidgetGroup(QVBoxLayout(),
             [
@@ -141,14 +141,14 @@ class SimulationTab(Tab):
         subtitle1 = QLabel('Star')
         subtitle1.setFont(QFont("Arial", weight=QFont.Bold))
 
-        distance = EditBox(DoubleValidator(0,10,2), float, *builder.get_property('star', 'distance', scale=1/1.496e+11), self.refresh)
-        radius   = EditBox(DoubleValidator(0,1e10,2), float, *builder.get_property('star', 'radius', scale=1/6.957e+8), self.refresh)
+        distance = FloatField((0,10,2), *builder.get_float_property('star', 'distance', scale=1/1.496e+11), self.refresh)
+        radius   = FloatField((0,1e10,2), *builder.get_float_property('star', 'radius', scale=1/6.957e+8), self.refresh)
 
         subtitle2 = QLabel('Camera')
         subtitle2.setFont(QFont("Arial", weight=QFont.Bold))
 
-        pixel_size  = EditBox(DoubleValidator(0.01,1000,2), float, *builder.get_property('cam', 'pixel_size', scale=1e6), self.refresh)
-        view_angle = EditBox(DoubleValidator(0,180,2), float, *builder.get_property('cam', 'view_angle'), self.refresh)
+        pixel_size  = FloatField((0.01,1000,2), *builder.get_float_property('cam', 'pixel_size', scale=1e6), self.refresh)
+        view_angle = FloatField((0,180,2), *builder.get_property('cam', 'view_angle'), self.refresh)
 
         self.sidebar = WidgetGroup(QVBoxLayout(),
             [
@@ -174,7 +174,7 @@ class SimulationTab(Tab):
     def refresh(self):
         self.plot.refresh()
 
-    def set_timer(self, tick=250, dt = 80):
+    def set_timer(self, tick=250, dt = 100):
         self.time = 0
         self.timer = QtCore.QTimer(self, interval=tick, timeout=lambda : self.set_time(self.time+dt))
         self.timer.start()
@@ -186,15 +186,22 @@ class SimulationTab(Tab):
         self.builder.scene.set_time(self.time)
         self.refresh()
 
-    def on_play_pause(self):
-        if self.is_playing:
+    def pause(self):
             self.timer.stop()
             self.play_button.setText('Play')
             self.is_playing = False
+
+    def play(self):
+        self.timer.start()
+        self.play_button.setText('Pause')
+        self.is_playing = True
+
+
+    def on_play_pause(self):
+        if self.is_playing:
+            self.pause()
         else:
-            self.timer.start()
-            self.play_button.setText('Pause')
-            self.is_playing = True
+            self.play()
 
 class SpectrumTab(Tab):
 
@@ -211,7 +218,12 @@ class SpectrumTab(Tab):
         subtitle1 = QLabel('Star')
         subtitle1.setFont(QFont("Arial", weight=QFont.Bold))
 
-        temperature = EditBox(DoubleValidator(0,1e5,2), float, *builder.get_property('star', 'temperature'), self.refresh)
+        temperature = FloatField((0,1e5,2), *builder.get_property('star', 'temperature'), self.refresh)
+
+        subtitle2 = QLabel('Camera')
+        subtitle2.setFont(QFont("Arial", weight=QFont.Bold))
+
+        frequency_band = RangeField((0.1,1e10, 1), *builder.get_property('cam', 'frequency_band'), self.refresh, scale=1e-9)
 
         self.sidebar = WidgetGroup(QVBoxLayout(),
             [
@@ -220,6 +232,9 @@ class SpectrumTab(Tab):
             QLabel(' '),
             subtitle1,
             InspectorGroup('Temperature (K):', temperature),
+            QLabel(' '),
+            subtitle2,
+            InspectorGroup('Band (GHz):', frequency_band),
             None],
             )
 
@@ -257,11 +272,12 @@ if __name__=='__main__':
     window.tabs['Trajectory'].set_update_callback(
         lambda fig, ax : plot_star_trajectory_on_canvas(fig, ax, scene)
         )
+    p = fluxmap_plotter()
     window.tabs['Simulation'].set_update_callback(
-        lambda fig, ax : plot_fluxmap(fig, ax, scene)
+        lambda fig, ax : p(fig, ax, scene)
         )
     window.tabs['Simulation'].set_timer()
     window.tabs['Light Spectrum'].set_update_callback(
-        lambda fig, ax : plot_spectrum(fig, ax, scene, range=(0.5e13,0.5e16))
+        lambda fig, ax : plot_spectrum(fig, ax, scene, range=(1e8,0.5e16))
     )
     sys.exit(app.exec())
