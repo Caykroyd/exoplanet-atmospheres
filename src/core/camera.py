@@ -44,14 +44,6 @@ class Camera():
         self._focal_length = value
         self._vignetting = None
 
-    @property
-    def vignetting(self):
-        if self._vignetting is None:
-            x, y = self.pixel_grid()
-            self._vignetting = self.calculate_vignetting(x, y)
-
-        return self._vignetting
-
     def update(self, time, dt):
         # print(self.transform.parent.position, self.transform.position)
         pass
@@ -98,27 +90,22 @@ class Camera():
 
         return np.meshgrid(u,v)
 
-    def calculate_vignetting(self, x_c, y_c):
+    def vignetting(self, x_c, y_c):
 
-        ds = self.pixel_size
-        # x0, x1 = x_c-ds/2, x_c+ds/2
-        # y0, y1 = y_c-ds/2, y_c+ds/2
 
-        integrand = lambda x, y: \
-            1/np.sqrt(1+x**2)*(np.arctan(x*y / np.sqrt(y**2+1)) - np.arctan(y * np.sqrt(x**2+1))) \
-            + np.arcsinh(y) + y * np.log(x + np.sqrt(1 + x**2 + y**2)) - y
-
-        # return integrand(x1,y1) + integrand(x0,y0) - integrand(x0,y1) - integrand(x1,y0)
         return ds**2 / np.sqrt(x_c**2 + y_c**2 + self.focal_length**2) / self.focal_length
 
     def capture(self, I):
 
+        ds = self.pixel_size
+        f_0 = self.focal_length
+
         x, y = self.pixel_grid()
-        z = self.focal_length * np.ones_like(x)
+        z = f_0 * np.ones_like(x)
 
         # rewrite the positions of pixels in terms of the spherical angles
-        r = np.stack([x, y, z], axis = -1).reshape(-1, 3)
-        X, Y, Z = (self.transform.local_to_global_coords(r) - self.transform.position).T
+        r = np.stack([x, y, z], axis = -1)
+        X, Y, Z = (self.transform.local_to_global_coords(r.reshape(-1, 3)) - self.transform.position).T
 
         X = X.reshape(x.shape)
         Y = Y.reshape(y.shape)
@@ -130,7 +117,8 @@ class Camera():
 
         I_px = I(X, Y, Z)
 
-        F = I_px * self.vignetting
+
+        F = I_px * (ds/f_0)**2 / np.linalg.norm(r / f_0, axis=-1)
 
         return F
 

@@ -252,7 +252,7 @@ class SpectrumTab(Tab):
         self.init()
 
 from params import SceneBuilder
-from core.plot import *
+from plot import *
 
 import yaml
 import sys
