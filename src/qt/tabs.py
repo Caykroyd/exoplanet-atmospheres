@@ -1,4 +1,4 @@
-from qtpy import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from PyQt5.QtWidgets import QPushButton, QWidget, QAction, QTabWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSlot
