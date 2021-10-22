@@ -1,7 +1,7 @@
-
 from PyQt5.QtWidgets import QWidget, QLineEdit, QSlider, QHBoxLayout
 from PyQt5 import QtGui
 from PyQt5.QtGui import QDoubleValidator
+
 import numpy as np
 
 class WidgetGroup(QWidget):

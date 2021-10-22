@@ -1,14 +1,13 @@
 import sys
-from qtpy import QtCore, QtWidgets
 
-from qtpy.QtWidgets import *
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QIcon, QFont, QIntValidator
+from PyQt5 import QtCore, QtWidgets
 
 from qt.tabs import Tabbar, Tab
 from qt.canvas import PyplotCanvas
 from qt.widget import WidgetGroup, Slider, FloatField, RangeField
 
-from PyQt5.QtGui import QIntValidator,QFont
 
 from params import SceneBuilder
 
