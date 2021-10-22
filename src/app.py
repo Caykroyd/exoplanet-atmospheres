@@ -8,7 +8,6 @@ from qt.tabs import Tabbar, Tab
 from qt.canvas import PyplotCanvas
 from qt.widget import WidgetGroup, Slider, FloatField, RangeField
 
-
 from params import SceneBuilder
 
 class App(QtWidgets.QMainWindow):
