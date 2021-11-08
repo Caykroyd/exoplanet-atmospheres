@@ -17,6 +17,12 @@ class Transform:
     def global_to_local_coords(self, point):
         return self.rotation.inv()(point - self.position)
 
+    def local_to_global_vector(self, vector):
+        return self.rotation.apply(vector)
+
+    def global_to_local_vector(self, vector):
+        return self.rotation.inv()(vector)
+
     @property
     def position(self):
         if self.parent is None:

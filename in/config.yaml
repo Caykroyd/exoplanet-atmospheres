@@ -22,4 +22,4 @@ camera:
   pixel_size: 8.e-5 # m
   view_angle: 40 # degrees
   near_clipping_distance: 1 # m
-  frequency_band: [400.0e+9, 790.0e+9] # Hz, visible light
+  frequency_band: [400.0e+12, 790.0e+12] # Hz, visible light

@@ -91,6 +91,7 @@ def plot_setup(fig, ax, scene):
     '''
     cam, planet, star = itemgetter('cam', 'planet', 'star')(scene.objs)
 
+    scene.set_time(0)
     data = scene.update(duration = 24*3600, dt = 60, ostream=ostream)
 
     r = planet.radius
@@ -177,13 +178,20 @@ def plot_star_trajectory_on_canvas(fig, ax, scene):
 
     cam = scene.objs['cam']
 
+    scene.set_time(0)
     data = scene.update(duration = 24*3600, dt = 60, ostream=ostream)
 
     time, points = data['time'], data['trajectory']
 
     X, Y, Z = np.array([*zip(*points)])
-    
-    X, Y = cam.to_canvas((X,Y,Z))
+
+    X, Y, indices = cam.to_canvas((X,Y,Z))
+
+    order = np.argsort(X)
+    X, Y = X[order], Y[order]
+    # def consecutive(data):
+    #     return np.split(data, np.where(np.diff(data) != 1)+1)
+    # traj = consecutive(indices)
 
     ax.set_title('Trajectory of the star as seen by observer')
     ax.plot(X, Y, linewidth=2, linestyle='dotted', color='k')
@@ -214,16 +222,13 @@ def plot_spectrum(fig, ax, scene, range, res=10**3):
         B = np.zeros_like(freq)
         print('Didnt intersect')
 
-    scale = 1e12
-    B = B*scale
-
     # plt.title(r'Spectrum along axis {}'.format(tuple(axis)))
     ax.set_title('Spectrum along star-planet axis')
     ax.plot(freq, B, linestyle='dotted', c='k')
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel(r'$\nu \quad [Hz]$')
-    ax.set_ylabel(r'$I_\nu \quad [kW \: sr^{-1} \: m^{-2} \: nm^{-1}]$')
+    ax.set_ylabel(r'$I_\nu \quad [W \: sr^{-1} \: m^{-2} \: Hz^{-1}]$')
 
     freq_min, freq_max = cam.frequency_band
     band = (freq >= freq_min) & (freq <= freq_max)
@@ -236,18 +241,24 @@ def fluxmap_plotter():
         cam, planet, star = itemgetter('cam', 'planet', 'star')(scene.objs)
 
         def intensity(x, y, z):
-            B = cam.band_integrate(star.spectrum)
+            # B = cam.band_integrate(star.spectrum)
+            I_R,I_G,I_B = cam.RGB(star.spectrum)
             d = star.transform.position - cam.transform.position
 
-            return np.where( np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius, B, 0)
+            mask = (np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius)
+            R = np.where(mask, I_R, 0)
+            G = np.where(mask, I_G, 0)
+            B = np.where(mask, I_B, 0)
+
+            return np.stack([R,G,B])
 
         F = cam.capture(intensity)
 
-        scale = 1e6
-        F *= scale
+        F = np.moveaxis(F,0,-1)
 
-        ax.set_title(r'Flux seen by camera [$W \: mm^{-2}$]')
-        cmap = ax.imshow(F,cmap='gray',vmin=0)
+        ax.set_title(r'Flux seen by camera [$W \: m^{-2}$]')
+        lim = cam.canvas_width/2
+        cmap = ax.imshow(F,extent=[-lim,lim,-lim,lim], cmap='gray',vmin=0, origin='lower')
         ax.set_xlabel('X [px]')
         ax.set_ylabel('Y [px]')
 

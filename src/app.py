@@ -1,8 +1,8 @@
 import sys
 
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QFont, QIntValidator
-from PyQt5 import QtCore, QtWidgets
 
 from qt.tabs import Tabbar, Tab
 from qt.canvas import PyplotCanvas
@@ -221,7 +221,7 @@ class SpectrumTab(Tab):
         subtitle2 = QLabel('Camera')
         subtitle2.setFont(QFont("Arial", weight=QFont.Bold))
 
-        frequency_band = RangeField((0.1,1e10, 1), *builder.get_property('cam', 'frequency_band'), self.refresh, scale=1e-9)
+        frequency_band = RangeField((0.1,1e10, 1), *builder.get_property('cam', 'frequency_band'), self.refresh, scale=1e-12)
 
         self.sidebar = WidgetGroup(QVBoxLayout(),
             [
@@ -232,7 +232,7 @@ class SpectrumTab(Tab):
             InspectorGroup('Temperature (K):', temperature),
             QLabel(' '),
             subtitle2,
-            InspectorGroup('Band (GHz):', frequency_band),
+            InspectorGroup('Band (THz):', frequency_band),
             None],
             )
 

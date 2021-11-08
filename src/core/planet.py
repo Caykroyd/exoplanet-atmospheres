@@ -23,13 +23,13 @@ class Planet():
     @property
     def season_rot(self):
         print('season', self.season)
-        Rz = Rotation.from_rotvec(Vector3(0,0,1) * self.season, degrees=True)
-        Rx = Rotation.from_rotvec(self.tilt_axis * self.tilt, degrees=True)
+        Rz = Rotation.from_rotvec(Vector3(0,0,1) * self.season * np.pi/2)
+        Rx = Rotation.from_rotvec(self.tilt_axis * np.deg2rad(self.tilt))
         return Rz * Rx
 
     @property
     def R(self):
-        return Rotation.from_rotvec(self.tilt_axis * self.tilt, degrees=True)
+        return Rotation.from_rotvec(self.tilt_axis * np.deg2rad(self.tilt))
 
     @property
     def angular_velocity(self):
@@ -38,7 +38,7 @@ class Planet():
     def update(self, time, dt):
         if self.angular_velocity != 0:
             angular_position = self.angular_velocity * time
-            day_rot = Rotation.from_rotvec(Vector3(0,0,1)*angular_position)
+            day_rot = Rotation.from_rotvec(Vector3(0,0,1) * angular_position)
             self.transform.local_rotation =  self.R * day_rot
 
     def surface_point(self, latitude : float, longitude : float):
