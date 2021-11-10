@@ -32,8 +32,18 @@ class Vector3(np.ndarray):
         return self / norm
 
     @staticmethod
+    def project(u, dir):
+        dir = dir.normalize()
+        return np.dot(u, dir) * dir
+
+    @staticmethod
+    def angle(self, u, v):
+        return np.arccos(np.dot(u.normalized(), v.normalized()))
+
+    @staticmethod
     def zero():
         return Vector3(0,0,0)
+
 
 class Rotation(scipy.spatial.transform.Rotation):
     '''
