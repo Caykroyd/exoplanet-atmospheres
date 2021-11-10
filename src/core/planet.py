@@ -48,18 +48,10 @@ class Planet():
         '''
         theta = np.deg2rad(90 - latitude)
         phi   = np.deg2rad(longitude)
+        
+        e_r, e_theta, e_phi = spherical_basis(self.radius, theta, phi)
 
-        e_r = Vector3(np.sin(theta) * np.cos(phi),
-                      np.sin(theta) * np.sin(phi),
-                      np.cos(theta))
-
-        e_theta = Vector3(np.cos(theta) * np.cos(phi),
-                          np.cos(theta) * np.sin(phi),
-                         -np.sin(theta))
-
-        e_phi = Vector3(- np.sin(phi), np.cos(phi), 0)
-
-        r = self.radius * e_r
-        q = Rotation.from_canonical_to_basis(e_phi, -e_theta, e_r)
+        r = Vector3(from_spherical(self.radius, theta, phi))
+        q = Rotation.from_canonical_to_basis(e_phi, -e_theta, e_r) # right-handed basis
 
         return Transform(r, q, parent = self.transform)
