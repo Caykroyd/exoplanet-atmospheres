@@ -117,7 +117,7 @@ def plot_setup(fig, ax, scene):
     ax.plot(X, Y, Z, linewidth=2, linestyle='dashed', c='k')
 
     center = planet.transform.position
-    e_s = (star.transform.position-planet.transform.position).normalize()
+    e_s = (star.transform.position-planet.transform.position).normalized()
     axis_length = 3*r
 
     plot_axes(ax,center, Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), axis_length, linewidth=1, arrowstyle="-|>")

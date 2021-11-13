@@ -72,14 +72,12 @@ class RangeField(WidgetGroup):
     def single_property(self, getter, setter, i):
         scale = self.scale
         _val = getter()
-        print('Got',_val)
         def getter_wrapper(getter, i):
             _val = getter()
             return _val[i]*scale
         def setter_wrapper(x, setter, i):
             _val[i] = x/scale
             setter(_val)
-            print(_val)
         getter_i = lambda : getter_wrapper(getter, i)
         setter_i = lambda val : setter_wrapper(val, setter, i)
         return getter_i, setter_i

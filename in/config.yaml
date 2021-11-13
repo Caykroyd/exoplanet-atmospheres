@@ -13,6 +13,14 @@ planet:
     tilt: 23.4 # degrees
     season: 0.5 # 0 to 4 representing Spring, Summer, Autumn, Winter
 
+atmosphere:
+  depth: 12.000 # m
+  density: 245.657e23 # particles / m-3
+  species:
+    nitrogen:
+      fraction: 0.78 # mole fraction
+      scatter_efficiency: 5.1e−31
+
 observer:
   latitude: 10 # degrees, France = 40
   longitude: -20

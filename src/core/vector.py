@@ -26,14 +26,14 @@ class Vector3(np.ndarray):
         norm = np.linalg.norm(self)
         return norm
 
-    def normalize(self):
+    def normalized(self):
         norm = self.norm()
         assert not np.isclose(norm, 0)
         return self / norm
 
     @staticmethod
     def project(u, dir):
-        dir = dir.normalize()
+        dir = dir.normalized()
         return np.dot(u, dir) * dir
 
     @staticmethod
@@ -51,9 +51,9 @@ class Rotation(scipy.spatial.transform.Rotation):
     '''
     @staticmethod
     def from_canonical_to_basis(e_x, e_y, e_z):
-        e_x = e_x.normalize()
-        e_y = e_y.normalize()
-        e_z = e_z.normalize()
+        e_x = e_x.normalized()
+        e_y = e_y.normalized()
+        e_z = e_z.normalized()
         assert np.allclose([e_x @ e_y, e_y @ e_z, e_z @ e_x], 0), 'Basis is not orthogonal!'
         M = np.stack([e_x, e_y, e_z], axis=-1)
         return super(Rotation,Rotation).from_matrix(M)
@@ -74,7 +74,7 @@ class Rotation(scipy.spatial.transform.Rotation):
         return self.apply(vector)
 
 def ray_intersects_sphere(origin, dir, center, radius):
-    dir = dir.normalize()
+    dir = dir.normalized()
     s = center - origin
     s_perp = s - np.dot(s, dir) * dir
     return np.linalg.norm(s_perp) <= radius

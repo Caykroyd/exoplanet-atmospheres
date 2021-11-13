@@ -69,7 +69,7 @@ class Camera():
         X, Y, Z, i_ncull = self.cull_back(X, Y, Z)
         X, Y = self.project(X, Y, Z)
         X, Y, i_nclip = self.clip(X, Y)
-        print(i_ncull.shape, i_ncull.shape, i_nclip.shape)
+        
         indices = np.full(i_ncull.shape, False)
         indices[i_ncull][i_nclip] = True
         return X, Y, indices

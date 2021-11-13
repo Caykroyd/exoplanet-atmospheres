@@ -1,3 +1,5 @@
+import numpy as np
+from core.vector import Vector3
 
 def to_spherical(x, y, z):
     '''
@@ -27,3 +29,5 @@ def spherical_basis(r, theta, phi):
                      -np.sin(theta))
 
     e_phi = Vector3(- np.sin(phi), np.cos(phi), 0)
+
+    return e_r, e_theta, e_phi
