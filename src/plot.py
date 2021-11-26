@@ -2,8 +2,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 from operator import itemgetter
-from core.vector import ray_intersects_sphere
-from core.vector     import Vector3
+
+from core.vector    import Vector3, ray_intersects_sphere
+from core.radtransf import radtransf_block
+from core.montecarlo.montecarlo import MonteCarlo
 
 def set_axes_equal(ax):
     # https://stackoverflow.com/questions/13685386/matplotlib-equal-unit-length-with-equal-aspect-ratio-z-axis-is-not-equal-to
@@ -238,19 +240,74 @@ def fluxmap_plotter():
     setup = True # define the closure
 
     def plot_fluxmap(fig, ax, scene):
-        cam, planet, star = itemgetter('cam', 'planet', 'star')(scene.objs)
+        cam, planet, star, atmosphere = itemgetter('cam', 'planet', 'star', 'atmosphere')(scene.objs)
+        montecarlo = MonteCarlo(planet, atmosphere, cam, star)
 
-        def intensity(x, y, z):
-            # B = cam.band_integrate(star.spectrum)
-            I_R,I_G,I_B = cam.RGB(star.spectrum)
+        def intensity(freq, x, y, z):
+            print("Getting intensity...")
+            I = np.zeros((x.size, freq.size))
+
+            S = montecarlo.run()
+
+            freq_bins = np.clip(np.digitize(freq, montecarlo.freqs), 0, len(montecarlo.freqs)-1)
+
+            # Now solve the radiative transfer using the calculated source function
             d = star.transform.position - cam.transform.position
+            mask = (np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius) # camera is close to the origin, solve for star
+            # mask = mask.flatten()
 
-            mask = (np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius)
-            R = np.where(mask, I_R, 0)
-            G = np.where(mask, I_G, 0)
-            B = np.where(mask, I_B, 0)
 
-            return np.stack([R,G,B])
+            I0 = np.multiply.outer(mask, star.spectrum(freq))
+
+            obs_pos = montecarlo.transform.global_to_local_coords(cam.transform.position)
+
+            dirs = montecarlo.transform.global_to_local_vector(np.stack([x, y, z], axis=-1).reshape(-1,3))
+
+            cells, positions = zip(*(montecarlo.grid.compute_ray_cells(
+                                    start   = obs_pos,
+                                    end     = obs_pos + planet.radius*Vector3.unit(*d))
+                                for d in dirs))
+
+            def stack_uneven(arrays, dtype=None):
+                N = len(arrays)
+                M = np.max([a.shape for a in arrays], axis=0)
+                out   = np.zeros((N, *M), dtype=dtype)
+                shape = np.zeros((N, len(M)), dtype=np.int32)
+                for i, arr in enumerate(arrays):
+                    shape[i] = arr.shape
+                    out[(i,*(slice(j) for j in shape[i]))] = arrays[i]
+                return out, shape
+
+            cells     = (np.flip(cell, axis=-2) for cell in cells)
+            positions = (np.flip(pos, axis=-2)  for pos in positions)
+
+            cells, cell_blocks = stack_uneven(list(cells), dtype=np.int32)
+            pos, pos_blocks    = stack_uneven(list(positions))
+
+            delta_tau = np.linalg.norm(pos[:,1:,:] - pos[:,(0,),:], axis=-1)[...,np.newaxis] * atmosphere.coef_scatter(pos, freq)
+
+            print(freq_bins.shape, cells.shape, mask.shape)
+            S_i = S[(freq_bins.reshape(1,1,-1), *np.moveaxis(cells, -1, 0))]
+            # S_i = np.stack([S[(nu, *np.moveaxis(cells, -1, 0))].toarray() for nu in freq_bins], axis=-1)
+            print(S_i.shape)
+            # print(np.stack([s for s in S_i], axis=-1).shape)
+            print("Starting radiative transfer...")
+            I[i] = radtransf_block(I0, S_i, delta_tau, cell_blocks)
+
+            print("Done!")
+
+            return I0
+            #
+            # for i, (xi, yi, zi) in enumerate(zip(x.flatten(), y.flatten(), z.flatten())):
+            #
+            #     print(f"Running iteration {i} / {x.size}")
+
+            #     S_i = [np.array([S[(nu, *cell)] for nu in freq_bins]) for cell in cells]
+            #     I0 = lambda freq: star.spectrum(freq) * mask[i]
+            #
+            #     I[i] = radtransf(tau, I0(freq), S_i)
+            #
+            # return I.reshape((*x.shape, freq.size))
 
         F = cam.capture(intensity)
 

@@ -14,12 +14,12 @@ planet:
     season: 0.5 # 0 to 4 representing Spring, Summer, Autumn, Winter
 
 atmosphere:
-  depth: 12.000 # m
-  density: 245.657e23 # particles / m-3
+  depth: 120.e+3 # m
+  density: 245.657e+23 # particles / m-3
   species:
     nitrogen:
-      fraction: 0.78 # mole fraction
-      scatter_efficiency: 5.1e−31
+      fraction: 1 # 0.78 # mole fraction
+      rayleigh_cross_section: 5.1e-31 # m2, at wavelength 532 nm
 
 observer:
   latitude: 10 # degrees, France = 40
@@ -27,7 +27,7 @@ observer:
 
 camera:
   focal_length: 35.e-3 # m
-  pixel_size: 8.e-5 # m
-  view_angle: 40 # degrees
+  pixel_size: 8.e-4 # m
+  view_angle: 45 # degrees
   near_clipping_distance: 1 # m
   frequency_band: [400.0e+12, 790.0e+12] # Hz, visible light

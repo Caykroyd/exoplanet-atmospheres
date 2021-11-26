@@ -6,6 +6,8 @@ from core.planet    import Planet
 from core.observer  import Observer
 from core.camera    import Camera
 
+from core.montecarlo.atmosphere import ConstantBlockAtmosphere
+
 import yaml
 
 class SceneBuilder:
@@ -41,12 +43,18 @@ class SceneBuilder:
             planet = Planet(**params['planet']['params'])
             scene.register(planet, 'planet')
 
+            # Setup the atmosphere
+            atmosphere = ConstantBlockAtmosphere(planet, **params['atmosphere'])
+            scene.register(atmosphere, 'atmosphere')
+
             # Setup the observer on the planet's surface, facing radially
             observer = Observer(planet, **params['observer'])
             scene.register(observer, 'observer')
 
             cam = Camera(observer, **params['camera'])
             scene.register(cam, 'cam')
+
+            observer.camera = cam
 
             # Setup the star
             star = Star(**params['star']['params'])

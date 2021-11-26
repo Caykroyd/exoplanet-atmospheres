@@ -6,7 +6,7 @@ class Vector3(np.ndarray):
     Override of nd.array class for 3D vectors.
     '''
     def __new__(cls, x, y, z):
-        obj = np.asarray([x, y, z]).view(cls)
+        obj = np.stack([x, y, z], axis=0).view(cls)
         return obj
 
     def __array_finalize__(self, obj):
@@ -23,13 +23,14 @@ class Vector3(np.ndarray):
         return self[2]
 
     def norm(self):
-        norm = np.linalg.norm(self)
+        norm = np.linalg.norm(self, axis=0)
         return norm
 
     def normalized(self):
         norm = self.norm()
-        assert not np.isclose(norm, 0)
+        assert not np.any(np.isclose(norm, 0))
         return self / norm
+
 
     @staticmethod
     def project(u, dir):
@@ -44,6 +45,9 @@ class Vector3(np.ndarray):
     def zero():
         return Vector3(0,0,0)
 
+    @staticmethod
+    def unit(x, y, z):
+        return Vector3(x, y, z).normalized()
 
 class Rotation(scipy.spatial.transform.Rotation):
     '''

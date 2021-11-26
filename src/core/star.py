@@ -28,5 +28,14 @@ class Star:
     def spectrum(self, nu):
         return blackbody(self.temperature, nu)
 
+    def sample_frequency(self, freqs):
+
+        f = self.spectrum(freqs)
+        F = np.cumsum(f)
+        F = F / F[-1]
+
+        u = np.random.uniform(0, 1)
+        return np.interp(u, F, freqs) # F^{-1}(u)
+
     def update(self, time, dt):
         pass

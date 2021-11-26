@@ -17,7 +17,9 @@ class Camera():
         self.eps = near_clipping_distance
         self.frequency_band = frequency_band
         self._vignetting = None
-        print(str(self))
+
+        # Function definition
+        self.RGB = self.__get_RGB_wrapper(n_bins = 10)
 
     @property
     def pixel_size(self):
@@ -69,7 +71,7 @@ class Camera():
         X, Y, Z, i_ncull = self.cull_back(X, Y, Z)
         X, Y = self.project(X, Y, Z)
         X, Y, i_nclip = self.clip(X, Y)
-        
+
         indices = np.full(i_ncull.shape, False)
         indices[i_ncull][i_nclip] = True
         return X, Y, indices
@@ -94,7 +96,7 @@ class Camera():
     def vignetting(self, x_c, y_c):
         return ds**2 / np.sqrt(x_c**2 + y_c**2 + self.focal_length**2) / self.focal_length
 
-    def capture(self, I):
+    def capture(self, I_nu):
 
         ds = self.pixel_size
         f_0 = self.focal_length
@@ -104,7 +106,7 @@ class Camera():
 
         # rewrite the positions of pixels in terms of the spherical angles
         r = np.stack([x, y, z], axis = -1)
-        X, Y, Z = (self.transform.local_to_global_coords(r.reshape(-1, 3)) - self.transform.position).T
+        X, Y, Z = self.transform.local_to_global_vector(r.reshape(-1, 3)).T
 
         X = X.reshape(x.shape)
         Y = Y.reshape(y.shape)
@@ -114,27 +116,18 @@ class Camera():
         # theta = np.arctan(r)
         # phi = np.arctan2(Y, X)
 
-        I_px = I(X, Y, Z)
+        I_px = lambda freq: I_nu(freq, X, Y, Z) # (nu -> [W, H])
 
-        F = I_px * (ds/f_0)**2 / np.linalg.norm(r / f_0, axis=-1)
+        scale = 1e0  # W/m2
+        F_v = lambda freq: I_px(freq) * scale * np.pi / 4 * (ds/f_0)**2 * np.linalg.norm(r[:,:,np.newaxis] / f_0, axis=-1)**4
 
-        # Normalize then saturate array
-        F = F * 1e0 # W/m2
-        F = np.clip(F, 0, 1)
-        return F
+        R, G, B = self.RGB(F_v)
 
-    def RGB(self, I_v):
-        '''
-        Computes the RGB values of multiple pixels
-        Inputs:
-            freq [M]
-            I_v  [N, M]
+        return R, G, B
 
-        Output:
-            R, G, B [3, N]
-        '''
+    def __get_RGB_wrapper(self, n_bins = 1000):
 
-        def compute_basis_XYZ(wvl):
+        def __compute_basis_XYZ(wvl):
 
             def piecewise_gaussian(x, mean, std1, std2):
                 g1 = np.exp(-0.5*(x - mean)**2/std1**2)
@@ -150,9 +143,9 @@ class Camera():
 
             return e_x, e_y, e_z
 
-        def compute_basis_RGB(wvl):
+        def __compute_basis_RGB(wvl):
 
-            e_x, e_y, e_z = compute_basis_XYZ(wvl)
+            e_x, e_y, e_z = __compute_basis_XYZ(wvl)
 
             A = 1/0.17697 * np.array([
                 [0.49000, 0.31000, 0.20000],
@@ -163,18 +156,10 @@ class Camera():
             e_r, e_g, e_b = np.dot(np.linalg.inv(A), [e_x, e_y, e_z])
             return e_r, e_g, e_b
 
-        N = 1000
-
-        freq = np.linspace(*self.frequency_band, N)
+        freq = np.linspace(*self.frequency_band, n_bins)
         wvl = cst.SpeedOfLight / freq
 
-        e_r, e_g, e_b = compute_basis_RGB(wvl)
-
-        I = I_v(freq)
-
-        R = integrate_axis(I, freq, meas=e_r, axis=-1)
-        G = integrate_axis(I, freq, meas=e_g, axis=-1)
-        B = integrate_axis(I, freq, meas=e_b, axis=-1)
+        e_r, e_g, e_b = __compute_basis_RGB(wvl)
 
         # import matplotlib.pyplot as plt
         # plt.figure()
@@ -183,7 +168,32 @@ class Camera():
         # plt.plot(wvl*1e9, e_b)
         # plt.show()
 
-        return R, G, B
+        def __RGB(F_v):
+            '''
+            Computes the RGB values of multiple pixels
+            Inputs:
+                freq [M]
+                F_v  1 -> [N, M]
+
+            Output:
+                R, G, B [3, N]
+            '''
+            nonlocal freq
+
+            F = F_v(freq)
+
+            nonlocal e_r, e_g, e_b
+
+            R = integrate_axis(F, freq, meas=e_r, axis=-1)
+            G = integrate_axis(F, freq, meas=e_g, axis=-1)
+            B = integrate_axis(F, freq, meas=e_b, axis=-1)
+
+            # Saturate array
+            R, G, B = np.clip([R, G, B], 0, 1)
+
+            return R, G, B
+
+        return __RGB
 
     def __str__(self):
         return '''{}

@@ -7,7 +7,7 @@ def to_spherical(x, y, z):
     '''
     r = np.linalg.norm([x, y, z], axis=0)
     theta = np.arccos(z / r)
-    phi = np.arctan2(y, x)
+    phi = np.arctan2(y, x) % (2*np.pi)
     return r, theta, phi
 
 def from_spherical(r, theta, phi):

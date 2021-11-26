@@ -162,7 +162,7 @@ class SimulationTab(Tab):
             InspectorGroup('View Angle (°):', view_angle),
             None],
             )
-
+        flag = False
         super().__init__(name, QHBoxLayout(), [WidgetGroup(QVBoxLayout(), [self.plot, self.bottombar]), self.sidebar])
 
     def set_update_callback(self, func):
@@ -172,10 +172,10 @@ class SimulationTab(Tab):
     def refresh(self):
         self.plot.refresh()
 
-    def set_timer(self, tick=250, dt = 100):
+    def set_timer(self, tick=240250, dt = 100):
         self.time = 0
         self.timer = QtCore.QTimer(self, interval=tick, timeout=lambda : self.set_time(self.time+dt))
-        self.timer.start()
+        # self.timer.start()
         self.is_playing = True
 
     def set_time(self, time):
@@ -185,9 +185,9 @@ class SimulationTab(Tab):
         self.refresh()
 
     def pause(self):
-            self.timer.stop()
-            self.play_button.setText('Play')
-            self.is_playing = False
+        self.timer.stop()
+        self.play_button.setText('Play')
+        self.is_playing = False
 
     def play(self):
         self.timer.start()
