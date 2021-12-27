@@ -5,6 +5,7 @@ from core.star      import Star
 from core.planet    import Planet
 from core.observer  import Observer
 from core.camera    import Camera
+from core.montecarlo.montecarlo import MonteCarlo
 
 from core.montecarlo.atmosphere import ConstantBlockAtmosphere
 
@@ -51,7 +52,7 @@ class SceneBuilder:
             observer = Observer(planet, **params['observer'])
             scene.register(observer, 'observer')
 
-            cam = Camera(observer, **params['camera'])
+            cam = Camera(observer, **params['camera'], n_freqs=params['montecarlo']['n_freqs'])
             scene.register(cam, 'cam')
 
             observer.camera = cam
@@ -59,5 +60,9 @@ class SceneBuilder:
             # Setup the star
             star = Star(**params['star']['params'])
             scene.register(star, 'star')
+
+            montecarlo = MonteCarlo(planet, atmosphere, cam, star)
+            montecarlo.set_params(**params['montecarlo'])
+            scene.register(montecarlo, 'montecarlo')
 
         return SceneBuilder(scene)

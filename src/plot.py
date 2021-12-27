@@ -1,10 +1,11 @@
 from matplotlib import pyplot as plt
 import numpy as np
+import numpy.ma as ma # masked arrays
 
 from operator import itemgetter
 
 from core.vector    import Vector3, ray_intersects_sphere
-from core.radtransf import radtransf_block
+from core.radtransf import radtransf_ma
 from core.montecarlo.montecarlo import MonteCarlo
 
 def set_axes_equal(ax):
@@ -240,74 +241,88 @@ def fluxmap_plotter():
     setup = True # define the closure
 
     def plot_fluxmap(fig, ax, scene):
-        cam, planet, star, atmosphere = itemgetter('cam', 'planet', 'star', 'atmosphere')(scene.objs)
-        montecarlo = MonteCarlo(planet, atmosphere, cam, star)
+        cam, montecarlo, star, planet, atmosphere = \
+            itemgetter('cam', 'montecarlo', 'star', 'planet', 'atmosphere')(scene.objs)
 
         def intensity(freq, x, y, z):
+
             print("Getting intensity...")
-            I = np.zeros((x.size, freq.size))
 
-            S = montecarlo.run()
+            # Run Monte Carlo
+            source = montecarlo.run()
 
-            freq_bins = np.clip(np.digitize(freq, montecarlo.freqs), 0, len(montecarlo.freqs)-1)
+            ## Now solve the radiative transfer using the calculated source function
 
-            # Now solve the radiative transfer using the calculated source function
-            d = star.transform.position - cam.transform.position
-            mask = (np.sqrt(y**2 + z**2) * d.norm() <  x * star.radius) # camera is close to the origin, solve for star
-            # mask = mask.flatten()
-
+            # Compute the incoming specific intensity field: it will be zero except for where the stars are
+            dist = (star.transform.position - cam.transform.position).norm()
+            mask = (np.sqrt(y**2 + z**2) * dist <  x * star.radius) # camera is close to the origin, solve for star
 
             I0 = np.multiply.outer(mask, star.spectrum(freq))
 
+            # Compute the cells and intersection positions that each ray crosses
             obs_pos = montecarlo.transform.global_to_local_coords(cam.transform.position)
-
-            dirs = montecarlo.transform.global_to_local_vector(np.stack([x, y, z], axis=-1).reshape(-1,3))
-
+            ray_dirs = montecarlo.transform.global_to_local_vector(np.stack([x, y, z], axis=-1).reshape(-1,3))
             cells, positions = zip(*(montecarlo.grid.compute_ray_cells(
                                     start   = obs_pos,
-                                    end     = obs_pos + planet.radius*Vector3.unit(*d))
-                                for d in dirs))
+                                    end     = obs_pos + planet.radius*Vector3.unit(*u))
+                                for u in ray_dirs))
+            # [3, M, N, D]
 
+            # We need to stack the values for each ray to speed up computations
             def stack_uneven(arrays, dtype=None):
                 N = len(arrays)
                 M = np.max([a.shape for a in arrays], axis=0)
                 out   = np.zeros((N, *M), dtype=dtype)
-                shape = np.zeros((N, len(M)), dtype=np.int32)
+                mask   = np.ones((N, *M), dtype=np.bool)
+                shapes = np.zeros((N, len(M)), dtype=np.int32)
                 for i, arr in enumerate(arrays):
-                    shape[i] = arr.shape
-                    out[(i,*(slice(j) for j in shape[i]))] = arrays[i]
-                return out, shape
+                    shapes[i] = arr.shape
+                    out[(i,*(slice(j) for j in shapes[i]))] = arrays[i]
+                    mask[(i,*(slice(j) for j in shapes[i]))] = np.zeros_like(arrays[i], dtype=np.bool)
+                return ma.masked_array(out, mask), shapes
 
             cells     = (np.flip(cell, axis=-2) for cell in cells)
             positions = (np.flip(pos, axis=-2)  for pos in positions)
 
-            cells, cell_blocks = stack_uneven(list(cells), dtype=np.int32)
-            pos, pos_blocks    = stack_uneven(list(positions))
+            cells, block_shapes = stack_uneven(list(cells), dtype=np.int32)
+            pos, _              = stack_uneven(list(positions))
 
-            delta_tau = np.linalg.norm(pos[:,1:,:] - pos[:,(0,),:], axis=-1)[...,np.newaxis] * atmosphere.coef_scatter(pos, freq)
+            M, N = mask.shape
+            D = cells.shape[-2]
 
-            print(freq_bins.shape, cells.shape, mask.shape)
-            S_i = S[(freq_bins.reshape(1,1,-1), *np.moveaxis(cells, -1, 0))]
-            # S_i = np.stack([S[(nu, *np.moveaxis(cells, -1, 0))].toarray() for nu in freq_bins], axis=-1)
-            print(S_i.shape)
-            # print(np.stack([s for s in S_i], axis=-1).shape)
+            cells = cells.reshape(M, N, D, 3)
+            pos = pos.reshape(M, N, D+1, 3)
+
+            cells_in_ray = block_shapes.reshape(M, N, 2)[...,0]
+
+            i, j, k = np.moveaxis(cells, -1, 0).reshape(3, M, N, D, 1)
+
+            def ma_norm(a, axis=None):
+                '''
+                Computes the norm along a given axis of a masked array,
+                and updates the mask.
+                '''
+                data = np.linalg.norm(a,axis=axis)
+                mask = np.any(a.mask, axis=axis)
+                return ma.masked_array(data, mask)
+
+            depth = ma_norm(pos[...,0:,:] - pos[...,(0,),:], axis=-1)
+            tau   = depth[...,np.newaxis] * atmosphere.coef_scatter(freq)
+
+            # Take the array of frequencies and "snap" to our discrete grid of frequencies available from the Monte Carlo
+            freq_bins = np.clip(np.digitize(freq, montecarlo.freqs), 0, len(montecarlo.freqs)-1)
+
+            S = source[freq_bins, i, j, k]
+
+            print(f"Maximum value of Source function at pos {S.max()}")
+            print(f"Maximum value of Source function {source.tobsr().max()}")
             print("Starting radiative transfer...")
-            I[i] = radtransf_block(I0, S_i, delta_tau, cell_blocks)
+
+            I = radtransf_ma(I0, S, tau, cells_in_ray)
 
             print("Done!")
 
-            return I0
-            #
-            # for i, (xi, yi, zi) in enumerate(zip(x.flatten(), y.flatten(), z.flatten())):
-            #
-            #     print(f"Running iteration {i} / {x.size}")
-
-            #     S_i = [np.array([S[(nu, *cell)] for nu in freq_bins]) for cell in cells]
-            #     I0 = lambda freq: star.spectrum(freq) * mask[i]
-            #
-            #     I[i] = radtransf(tau, I0(freq), S_i)
-            #
-            # return I.reshape((*x.shape, freq.size))
+            return I
 
         F = cam.capture(intensity)
 

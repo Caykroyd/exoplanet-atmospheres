@@ -5,6 +5,8 @@ from math import floor, ceil, sqrt
 import numpy as np
 import core.montecarlo.sparse as sparse
 
+import sys
+
 class CellGrid_CartesianShell():
     def __init__(self, r0, r1, dx : Vector3):
         N = 2*np.floor(r1/dx).astype(np.int)
@@ -22,7 +24,7 @@ class CellGrid_CartesianShell():
         # self.mesh = np.meshgrid(self.x_c, self.y_c, self.z_c)
 
         print('Cube size:', self.shape)
-        print('Volume size of sparse array: {:.0f} / {:.0f}'.format(self.cube_volume, self.shell_volume))
+        print('Volume size of sparse array: {:.0f} / {:.0f}'.format(self.shell_volume, self.cube_volume))
 
     @property
     def cube_volume(self):
@@ -31,32 +33,8 @@ class CellGrid_CartesianShell():
     @property
     def shell_volume(self):
         nx, ny, nz = self.N//2
-        mx, my, mz = np.ceil(self.r0/self.dx).astype(np.int)
+        mx, my, mz = np.floor(self.r0/self.dx).astype(np.int)
         return int(4/3*np.pi*4*(nx*ny*nz - mx*my*mz))
-
-    def __construct_sparse_mesh(self):
-        keys = set()
-        keyhash = set()
-
-        dx, dy, dz = self.dx
-        nx, ny, nz = self.N//2
-        mx, my, mz = np.ceil(self.r0/self.dx).astype(np.int)
-
-        print('Cube size:', self.shape)
-        print('Volume size of sparse array: {:.0f} / {:.0f}'.format(4/3*np.pi*4*(nx*ny*nz - mx*my*mz), 4*nx*ny*nz))
-        for i in range(nx):
-            # speed up a little
-            ny_i = int(floor(sqrt(self.r0**2 - (i*dx)**2) / dy))
-            print(f"Step {i+1} of {nx}")
-            for j in range(ny_i):
-                nz_ij = int(np.floor(np.sqrt(       self.r1**2 - (i*dx)**2 - (j*dy)**2 )  / dz))
-                mz_ij = int(np.ceil (np.sqrt(max(0, self.r0**2 - (i*dx)**2 - (j*dy)**2 )) / dz))
-                k_arr = np.arange(mz_ij, nz_ij + 1)
-
-                keys.update(((i, j, k) for k in k_arr)) # We only save the positive values (1st octant), since the others can be obtained through symmetry
-                keyhash.update((self.__cell_to_hash(i+nx, j+ny, k+nz) for k in k_arr)) # note that the grid center corresponds to cell (nx, ny, nz), therefore we must translate
-        self.keys = keys
-        self.__keyhash = keyhash
 
     def new_sparse_property(self, shape = None, **kwargs):
         if shape is None:
@@ -78,29 +56,6 @@ class CellGrid_CartesianShell():
     def shape(self):
         return (self.N.x, self.N.y, self.N.z)
 
-    def __cell_to_hash(self, i, j, k):
-        nx, ny, nz = self.N // 2
-        i, j, k = abs(i - nx), abs(j - ny), abs(k - nz)
-        return i + j*nx + k*nx*ny
-
-    # def __cell_to_hash(self, i, j, k):
-    #     nx, ny, nz = self.N // 2
-    #     mx, my, mz = np.ceil(self.r0/self.dx).astype(np.int)
-    #
-    #     b0 = (( i -nx)*dx)**2 + (( j -ny)*dy)**2 + (( k -nz)*dz)**2
-    #     b1 = ((i+1-nx)*dx)**2 + ((j+1-ny)*dy)**2 + ((k+1-nz)*dz)**2
-    #     in_sparse = np.logical_and(self.r0**2 <= b0, b1 <= self.r1**2)
-    #     assert np.all(in_sparse)
-    #
-    #     V1 = 1/3 * np.pi * (2*nx - i)*(nx+i)**2
-    #     V0 = 1/3 * np.pi * (2*mx - i)*(mx+i)**2
-    #
-    #     ny_i = int(floor(sqrt(self.r0**2 - (i*dx)**2) / dy))
-    #     my_i = int(ceil (sqrt(self.r0**2 - (i*dx)**2) / dy))
-    #
-    #     A1 = np.pi * j
-    #     return int(V1 - V0) + int(A1 - A0) + (S1 - S0)
-
     def cell_in_bounds(self, i, j, k):
         '''
         Returns whether given cell(s) indices is inside the grid domain
@@ -114,9 +69,12 @@ class CellGrid_CartesianShell():
 
         nx, ny, nz = self.N // 2
         dx, dy, dz = self.dx
-        b0 = (( i -nx)*dx)**2 + (( j -ny)*dy)**2 + (( k -nz)*dz)**2
-        b1 = ((i+1-nx)*dx)**2 + ((j+1-ny)*dy)**2 + ((k+1-nz)*dz)**2
-        in_sparse = np.logical_and(self.r0**2 <= b0, b1 <= self.r1**2)
+
+        i, j, k = abs(i-nx), abs(j-ny), abs(k-nz)
+        b0 = (i*dx)**2 + (j*dy)**2 + (k*dz)**2
+        b1 = ((i+1)*dx)**2 + ((j+1)*dy)**2 + ((k+1)*dz)**2
+        # in_sparse = np.logical_and(self.r0**2 <= b0, b1 <= self.r1**2)
+        in_sparse = np.logical_or(self.r0**2 <= b1, b0 <= self.r1**2)
 
         return np.logical_and(in_block, in_sparse)
 
@@ -133,8 +91,9 @@ class CellGrid_CartesianShell():
         '''
         # Since broadcasting only works on the highest axis, we need to swap_axis.
         # For clarity, let's do it this way:
-        i, j, k = self.position_to_cell(position)
-        return self.cell_in_bounds(i, j, k)
+        # i, j, k = self.position_to_cell(position)
+        # return self.cell_in_bounds(i, j, k)
+        return in_shell(position)
 
     def in_shell(self, position, eps = 1e-9):
         '''
@@ -169,7 +128,13 @@ class CellGrid_CartesianShell():
         Returns the first intersection point of a ray with the grid domain (closest to start).
         Ray is defined as a half-segment beginning in start and along dir.
 
-        ! Warning: At the moment, we only consider outer radius bounds !
+        Warning: We only consider outer radius bounds
+
+        Inputs:
+            ray start point: [3]
+            ray direction: [3]
+        Outputs:
+            projected posistion: [3]
         '''
         if self.in_shell(start):
             return start
@@ -195,6 +160,7 @@ class CellGrid_CartesianShell():
         pos = [p for p in pos if np.dot(dir, p - start) >= 0]
 
         if len(pos)==0:
+            print("Warning: ray does not intersect shell.", file=sys.stderr)
             return None
 
         # Get the closest position to start
@@ -285,5 +251,9 @@ class CellGrid_CartesianShell():
                 pos = np.concatenate([pos, end[np.newaxis,:]], axis=0)
             else:
                 cells = cells[:-1] # discard end cell!
+
+        # TODO: Instead of doing this at the end, code properly...
+        # cells = np.moveaxis(cells, -1, 0)
+        # pos   = np.moveaxis(pos, -1, 0)
 
         return cells.astype(np.int32), pos

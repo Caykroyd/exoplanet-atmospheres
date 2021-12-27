@@ -35,7 +35,7 @@ class ConstantBlockAtmosphere:
 
     @density.setter
     def density(self, value):
-        self._density = lambda pos : value# * np.ones_like(pos[0])
+        self._density = value
 
     @property
     def species(self):
@@ -45,13 +45,13 @@ class ConstantBlockAtmosphere:
     def species(self, value):
         self._species   = [Species(**params) for name, params in value.items()]
 
-    def coef_scatter(self, position : Vector3, freq):
+    def coef_scatter(self, freq):
         '''
         I think species must be treated differently and instead of adding their coefficients
         '''
         A_s = (s.rayleigh_cross_section(freq) for s in self.species)
         X   = (s.fraction for s in self.species)
-        N = self.density(position)
+        N = self.density
         return  N * sum(a_s * x for a_s, x in zip(A_s, X))
 
     def coef_absorption(self, position : Vector3, freq):
@@ -62,4 +62,4 @@ class ConstantBlockAtmosphere:
         This function supposes that the scatter coefficient is constant.
         TODO: Use integration to determine the exact position
         '''
-        return start_pos + dir * (optical_depth / self.coef_scatter(start_pos, freq))
+        return start_pos + dir * (optical_depth / self.coef_scatter(freq))

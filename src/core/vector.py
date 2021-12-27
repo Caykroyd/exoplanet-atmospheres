@@ -31,7 +31,6 @@ class Vector3(np.ndarray):
         assert not np.any(np.isclose(norm, 0))
         return self / norm
 
-
     @staticmethod
     def project(u, dir):
         dir = dir.normalized()

@@ -16,9 +16,9 @@ class App(QtWidgets.QMainWindow):
         self.title = 'Exoplanet atmosphere simulator'
 
         self.tabs = Tabbar([
+            SimulationTab('Simulation', builder),
             SetupTab('Scene Setup', builder),
             TrajectoryTab('Trajectory', builder),
-            SimulationTab('Simulation', builder),
             SpectrumTab('Light Spectrum', builder)
             ],
         self)

@@ -9,17 +9,18 @@ import scipy.integrate
 
 class Camera():
 
-    def __init__(self, parent, focal_length : float = 1, pixel_size : float = 1, view_angle : float = 160, near_clipping_distance : float = 1, frequency_band : tuple = (0,0)):
+    def __init__(self, parent, focal_length : float = 1, pixel_size : float = 1, saturation : float = 1, view_angle : float = 160, near_clipping_distance : float = 1, frequency_band : tuple = (0,0), n_freqs : int = 10):
         self.transform = Transform(parent = parent.transform)
         self._focal_length = focal_length
         self._pixel_size = pixel_size
         self._view_angle = view_angle
+        self._saturation = saturation
         self.eps = near_clipping_distance
         self.frequency_band = frequency_band
         self._vignetting = None
 
         # Function definition
-        self.RGB = self.__get_RGB_wrapper(n_bins = 10)
+        self.RGB = self.__get_RGB_wrapper(n_bins = n_freqs)
 
     @property
     def pixel_size(self):
@@ -36,6 +37,14 @@ class Camera():
     @view_angle.setter
     def view_angle(self, value):
         self._view_angle = value
+
+    @property
+    def saturation(self):
+        return self._saturation
+
+    @saturation.setter
+    def saturation(self, value):
+        self._saturation = value
 
     @property
     def focal_length(self):
@@ -116,10 +125,9 @@ class Camera():
         # theta = np.arctan(r)
         # phi = np.arctan2(Y, X)
 
-        I_px = lambda freq: I_nu(freq, X, Y, Z) # (nu -> [W, H])
+        I_px = lambda freq: I_nu(freq, X, Y, Z) / self.saturation # (nu -> [W, H])
 
-        scale = 1e0  # W/m2
-        F_v = lambda freq: I_px(freq) * scale * np.pi / 4 * (ds/f_0)**2 * np.linalg.norm(r[:,:,np.newaxis] / f_0, axis=-1)**4
+        F_v = lambda freq: I_px(freq) * np.pi / 4 * (ds/f_0)**2 * np.linalg.norm(r[:,:,np.newaxis] / f_0, axis=-1)**4
 
         R, G, B = self.RGB(F_v)
 
@@ -163,9 +171,11 @@ class Camera():
 
         # import matplotlib.pyplot as plt
         # plt.figure()
-        # plt.plot(wvl*1e9, e_r)
-        # plt.plot(wvl*1e9, e_g)
-        # plt.plot(wvl*1e9, e_b)
+        # plt.plot(wvl*1e9, e_r, c='r', label=r'$g_R$')
+        # plt.plot(wvl*1e9, e_g, c='g', label=r'$g_G$')
+        # plt.plot(wvl*1e9, e_b, c='b', label=r'$g_B$')
+        # plt.xlabel(r'$\lambda \: [nm]$')
+        # plt.legend()
         # plt.show()
 
         def __RGB(F_v):

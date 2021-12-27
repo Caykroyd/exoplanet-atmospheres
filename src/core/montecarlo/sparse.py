@@ -10,7 +10,7 @@ class DOKTensor(dok_matrix):
             order = np.concatenate([order[n//4:], order[:n//4]])
             joindims = np.full(n, False)
             joindims[order[:n//2]] = True
-            print(f"Joing dims {joindims} for shape {shape}")
+            print(f"Joining dims {joindims} for shape {shape}")
 
             self.__axis_order = order # doesn't need to be sorted by size: instead we can just send the indices where(joindims) to one side and the others to the other side
         self.__dimsN = joindims

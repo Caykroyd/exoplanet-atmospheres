@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.ma as ma # masked arrays
 
 def radtransf(tau, I0, S):
     assert len(tau) == len(S) + 1
@@ -9,21 +10,33 @@ def radtransf(tau, I0, S):
 
     return I0 * np.exp(-delta_tau[0]) #+ np.sum(dI, axis=0)
 
-def radtransf_block(I0, S, delta_tau, cell_blocks):
+def radtransf_ma(I0, S, tau, cells_in_ray):
     '''
     Inputs:
-        I0   [M, N, FREQ]
-        S    [M, N, CELLS, FREQ]
-        dtau [M, N, CELLS, FREQ]
-        cell_blocks [M, N]
+        I0  [M, N, FREQ]
+        S   [M, N, CELLS, FREQ]
+        tau [M, N, POS  , FREQ]
+        cells_in_ray [M, N]
     Output:
         I    [M, N, FREQ]
     '''
-    assert delta_tau.shape == S.shape,f"Shapes do not correspond! {delta_tau.shape}, {S.shape}"
     M, N, CELLS, FREQ = S.shape
+    assert I0.shape == (M, N, FREQ),f"Shapes do not correspond! {I0.shape}, {(M, N, FREQ)}"
+    assert tau.shape == (M, N, CELLS+1, FREQ),f"Shapes do not correspond! {tau.shape}, {(M, N, CELLS+1, FREQ)}"
+    assert cells_in_ray.shape == (M, N),f"Shapes do not correspond! {cells_in_ray.shape}, {(M, N)}"
 
-    dI = np.zeros((M, N, CELLS, ))
-    dI = S * np.diff(np.exp(-delta_tau), axis = -2)
-    # We are only allowed to fill the blocks in dI up to their cell_count!!
+    dI = S * np.diff(np.exp(-tau), axis = -2)
 
-    return I0 * np.exp(-delta_tau[...,-1,:]) + np.sum(dI, axis=-2)
+    # take the elements (cells_in_ray-1) from tau.
+    # delta_tau = tau[(*np.ix_(np.arange(M), np.arange(N)), cells_in_ray, None)].squeeze(axis=-2)
+    i0, i1 = ma.notmasked_edges(tau, axis = -2)
+    delta_tau = (tau[i1] - tau[i0]).reshape(M, N, FREQ)
+
+    assert np.all(delta_tau >= 0)
+    print(f'Rad transf magnitudes:')
+    print(f'\tI0 {np.abs(I0).max()}')
+    print(f'\tabsp {np.exp(-delta_tau).min()}')
+    print(f'\tdtau {np.abs(np.diff(np.exp(-tau), axis = -2)).max()}')
+    print(f'\tS {np.abs(S).max()}')
+    print(f'\tdI {np.abs(dI).max()}')
+    return I0 * np.exp(-delta_tau) + np.sum(dI, axis=-2)
