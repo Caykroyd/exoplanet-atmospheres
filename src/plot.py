@@ -328,7 +328,8 @@ def fluxmap_plotter():
 
         F = np.moveaxis(F,0,-1)
 
-        ax.set_title(r'Flux seen by camera [$W \: m^{-2}$]')
+        digits = int(np.ceil(np.log10(cam.saturation)))
+        ax.set_title(rf'Flux seen by camera [$10^{{ {digits} }} W \: m^{{-2}}$]')
         lim = cam.canvas_width/2
         cmap = ax.imshow(F,extent=[-lim,lim,-lim,lim], cmap='gray',vmin=0, origin='lower')
         ax.set_xlabel('X [px]')

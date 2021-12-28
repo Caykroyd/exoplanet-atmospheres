@@ -139,8 +139,8 @@ class SimulationTab(Tab):
         subtitle1 = QLabel('Star')
         subtitle1.setFont(QFont("Arial", weight=QFont.Bold))
 
-        distance = FloatField((0,10,2), *builder.get_float_property('star', 'distance', scale=1/1.496e+11), self.refresh)
-        radius   = FloatField((0,1e10,2), *builder.get_float_property('star', 'radius', scale=1/6.957e+8), self.refresh)
+        distance = FloatField((0,10,5), *builder.get_float_property('star', 'distance', scale=1/1.496e+11), self.refresh)
+        radius   = FloatField((0,1e10,5), *builder.get_float_property('star', 'radius', scale=1/6.957e+8), self.refresh)
 
         subtitle2 = QLabel('Camera')
         subtitle2.setFont(QFont("Arial", weight=QFont.Bold))

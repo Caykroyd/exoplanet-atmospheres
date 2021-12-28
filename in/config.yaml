@@ -1,7 +1,7 @@
 star:
   name: Sun
   params:
-    distance: 1.496e+11 # m
+    distance: 1.496e+10 # m
     radius: 6.957e+9 # m # default = 10 solar radii
     temperature: 5778 # m
 
@@ -11,10 +11,10 @@ planet:
     radius: 6.371e+6 # m
     rotation_period: 86400 # s
     tilt: 23.4 # degrees
-    season: 0.5 # 0 to 4 representing Spring, Summer, Autumn, Winter
+    season: 0.3 # 0 to 4 representing Spring, Summer, Autumn, Winter
 
 atmosphere:
-  depth: 700.e+3 # m
+  depth: 12.e+3 # m
   density: 245.657e+23 # particles / m-3
   species:
     nitrogen:
@@ -23,17 +23,17 @@ atmosphere:
 
 montecarlo:
   n_packets: 10000
-  n_freqs: 10
-  grid_blocks: [500, 100, 100]
+  n_freqs: 100
+  grid_blocks: [5000, 50000, 50000]
 
 observer:
   latitude: 10 # degrees, France = 40
-  longitude: -20 # degrees
+  longitude: -10 # degrees
 
 camera:
   focal_length: 35.e-3 # m
-  pixel_size: 8.e-4 # m
-  view_angle: 80 # degrees
-  saturation: 1.e-5 # W/m
+  pixel_size: 2.e-4 # m
+  view_angle: 30 # degrees
+  saturation: 1.e-15 # W/m
   near_clipping_distance: 1 # m
   frequency_band: [400.0e+12, 790.0e+12] # Hz, visible light
