@@ -38,7 +38,7 @@ class SceneBuilder:
         scene = Scene()
 
         with open(file, 'r') as f:
-            params = yaml.load(f)
+            params = yaml.safe_load(f)
 
             # Setup the exoplanet in the scene
             planet = Planet(**params['planet']['params'])

@@ -25,7 +25,7 @@ class Scene:
         '''
         Updates all the objects in the scene and saves the output to a stream
         '''
-        assert duration >= 0, dt > 0
+        assert duration >= 0 and dt > 0
 
         output = defaultdict(list)
         for k,v in ostream(self, 0, dt).items():

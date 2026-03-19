@@ -15,7 +15,7 @@ class Star:
 
     @property
     def luminosity(self):
-        return 4*np.pi*self.radius**2 * cst.Boltzmann * self.temperature**4
+        return 4*np.pi*self.radius**2 * cst.StefanBoltzmann * self.temperature**4
 
     @property
     def distance(self):

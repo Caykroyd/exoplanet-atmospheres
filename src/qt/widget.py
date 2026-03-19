@@ -94,8 +94,8 @@ class Slider(QSlider):
         self.n = abs(b-a)/step
 
         super().__init__(orientation)
-        self.setRange(a*self.n, b*self.n)
-        self.setValue(float(getter()) * self.n)
+        self.setRange(int(a*self.n), int(b*self.n))
+        self.setValue(int(float(getter()) * self.n))
         self.valueChanged.connect(self._value_changed)
 
     def _value_changed(self, value):

@@ -81,8 +81,11 @@ class Camera():
         X, Y = self.project(X, Y, Z)
         X, Y, i_nclip = self.clip(X, Y)
 
-        indices = np.full(i_ncull.shape, False)
-        indices[i_ncull][i_nclip] = True
+        # indices = np.full(i_ncull.shape, False)
+        # indices[i_ncull][i_nclip] = True        
+        indices = i_ncull.copy()
+        indices[i_ncull] = i_nclip
+
         return X, Y, indices
 
     def band_integrate(self, I_v):
@@ -103,7 +106,7 @@ class Camera():
         return np.meshgrid(u,v)
 
     def vignetting(self, x_c, y_c):
-        return ds**2 / np.sqrt(x_c**2 + y_c**2 + self.focal_length**2) / self.focal_length
+        return self.pixel_size**2 / np.sqrt(x_c**2 + y_c**2 + self.focal_length**2) / self.focal_length
 
     def capture(self, I_nu):
 

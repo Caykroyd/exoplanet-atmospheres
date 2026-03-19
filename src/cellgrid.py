@@ -7,7 +7,7 @@ import sparse
 
 class CellGrid_CartesianShell():
     def __init__(self, r0, r1, dx : Vector3):
-        N = 2*np.floor(r1/dx).astype(np.int)
+        N = 2*np.floor(r1/dx).astype(np.int32)
         # recalculate exactly
         dx = (2*r1)/N
 
@@ -27,7 +27,7 @@ class CellGrid_CartesianShell():
 
         dx, dy, dz = self.dx
         nx, ny, nz = self.N//2
-        mx, my, mz = np.ceil(self.r0/self.dx).astype(np.int)
+        mx, my, mz = np.ceil(self.r0/self.dx).astype(np.int32)
 
         print('Cube size:', self.shape)
         print('Volume size of sparse array: {:.0f} / {:.0f}'.format(4/3*np.pi*4*(nx*ny*nz - mx*my*mz), 4*nx*ny*nz))

@@ -123,7 +123,7 @@ class SimulationTab(Tab):
         self.time_slider = QSlider(QtCore.Qt.Horizontal)
         self.time_slider.setMaximum(self.builder.get('planet','rotation_period'))
         self.time_slider.valueChanged.connect(self.set_time)
-        self.play_button = QPushButton('Pause')
+        self.play_button = QPushButton('Play')
         self.play_button.clicked.connect(self.on_play_pause)
 
         self.bottombar = WidgetGroup(QVBoxLayout(),
@@ -176,7 +176,7 @@ class SimulationTab(Tab):
         self.time = 0
         self.timer = QtCore.QTimer(self, interval=tick, timeout=lambda : self.set_time(self.time+dt))
         # self.timer.start()
-        self.is_playing = True
+        self.is_playing = False
 
     def set_time(self, time):
         self.time = time % self.time_slider.maximum()
@@ -193,7 +193,6 @@ class SimulationTab(Tab):
         self.timer.start()
         self.play_button.setText('Pause')
         self.is_playing = True
-
 
     def on_play_pause(self):
         if self.is_playing:

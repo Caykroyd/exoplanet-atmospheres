@@ -23,6 +23,7 @@ class Planet():
 
     @property
     def season_rot(self):
+        # to do: check this is correct
         print('season', self.season)
         Rz = Rotation.from_rotvec(Vector3(0,0,1) * self.season * np.pi/2)
         Rx = Rotation.from_rotvec(self.tilt_axis * np.deg2rad(self.tilt))

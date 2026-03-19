@@ -15,19 +15,19 @@ class Transform:
         return self.rotation.apply(point) + self.position
 
     def global_to_local_coords(self, point):
-        return self.rotation.inv()(point - self.position)
+        return self.rotation.inv().apply(point - self.position)
 
     def local_to_global_vector(self, vector):
         return self.rotation.apply(vector)
 
     def global_to_local_vector(self, vector):
-        return self.rotation.inv()(vector)
+        return self.rotation.inv().apply(vector)
 
     @property
     def position(self):
         if self.parent is None:
             return self.local_position
-        return self.parent.local_to_global_coords(self.local_position)
+        return Vector3(self.parent.local_to_global_coords(self.local_position))
 
     @property
     def rotation(self):
@@ -39,7 +39,10 @@ class Transform:
         '''
         Applies a translation with an offset in worldcoords
         '''
-        self.local_position = parent.global_to_local_coords(self.position + offset)
+        if self.parent is None:
+            self.local_position += offset
+        else:
+            self.local_position = Vector3(self.parent.global_to_local_coords(self.position + offset))
 
     def detach(self):
         self.local_position = self.position
@@ -47,8 +50,11 @@ class Transform:
         self.parent = None
 
     def attach(self, parent):
-        self.local_position = parent.global_to_local_coords(self.position)
-        self.local_rotation = parent.rotation.inverse * self.rotation
+        world_position = self.position
+        world_rotation = self.rotation
+        self.parent = parent
+        self.local_position = parent.global_to_local_coords(world_position)
+        self.local_rotation = parent.rotation.inv() * world_rotation
 
     @staticmethod
     def at_origin():

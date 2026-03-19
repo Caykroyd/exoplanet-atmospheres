@@ -5,8 +5,20 @@ class Vector3(np.ndarray):
     '''
     Override of nd.array class for 3D vectors.
     '''
-    def __new__(cls, x, y, z):
-        obj = np.stack([x, y, z], axis=0).view(cls)
+    def __new__(cls, *args):
+        if len(args) == 1:
+            arr = np.asarray(args[0])
+            if arr.shape[0] != 3:
+                raise ValueError(f"Expected first dimension to have size 3, got shape {arr.shape}")
+            obj = arr.view(cls)
+
+        elif len(args) == 3:
+            x, y, z = args
+            obj = np.stack([x, y, z], axis=0).view(cls)
+
+        else:
+            raise TypeError("Vector3 expects either (x, y, z) or (array_like with shape (3, ...))")
+
         return obj
 
     def __array_finalize__(self, obj):
@@ -63,7 +75,7 @@ class Rotation(scipy.spatial.transform.Rotation):
 
     @staticmethod
     def from_basis_to_canonical(e_x, e_y, e_z):
-        return from_basis_to_canonical().inverse()
+        return Rotation.from_canonical_to_basis(e_x, e_y, e_z).inv()
 
     def apply(self, vector : Vector3):
         u = super().apply(vector)

@@ -1,0 +1,22 @@
+Questions
+
+- Suppose that atmosphere is homogenious? same density and composition, and a fixed depth
+
+- Processes to consider: absorption, emission and (Rayleigh or Mie phase scattering function? No polarization?)
+  - absorption + emission => frequency redistribution
+
+- How to get parameters: calculate from atoms / molecules ? (sounds too hard), get from an online table?
+
+- What to do about temperature? It seems like it would be super complicated to calculate this too!
+
+- Fix issue with flux maps (textbook p._): pi/4 (d/f)^2 cos^4
+
+- Other comments to fix from previous step
+
+
+- Atmosphere constitution:
+
+density: 1.2 # kg/m3
+molecular_weight: 28.946 # g/mol
+
+=> n = 41.4565 mol/m3 = 245.657x20^23 m{-3}

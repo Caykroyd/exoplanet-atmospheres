@@ -166,7 +166,8 @@ class MonteCarlo:
         dS = ds * a_scat * photon.luminosity / (4*np.pi*dV) * 2*RayleighPhaseFunction.get(mu)
 
         freq_bin = np.digitize(photon.frequency, self.freqs)
-        freq_bin = np.clip(freq_bin, 0, len(self.freqs))
+        # freq_bin = np.clip(freq_bin, 0, len(self.freqs))
+        freq_bin = np.clip(freq_bin, 0, len(self.freqs) - 1)
 
         i, j, k = np.moveaxis(cells, -1, 0)
         self.S[freq_bin, i, j, k] += dS

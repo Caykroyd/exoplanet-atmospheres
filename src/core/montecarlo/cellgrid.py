@@ -9,7 +9,7 @@ import sys
 
 class CellGrid_CartesianShell():
     def __init__(self, r0, r1, dx : Vector3):
-        N = 2*np.floor(r1/dx).astype(np.int)
+        N = 2*np.floor(r1/dx).astype(np.int32)
         # recalculate exactly
         dx = (2*r1)/N
 
@@ -33,7 +33,7 @@ class CellGrid_CartesianShell():
     @property
     def shell_volume(self):
         nx, ny, nz = self.N//2
-        mx, my, mz = np.floor(self.r0/self.dx).astype(np.int)
+        mx, my, mz = np.floor(self.r0/self.dx).astype(np.int32)
         return int(4/3*np.pi*4*(nx*ny*nz - mx*my*mz))
 
     def new_sparse_property(self, shape = None, **kwargs):
@@ -74,7 +74,7 @@ class CellGrid_CartesianShell():
         b0 = (i*dx)**2 + (j*dy)**2 + (k*dz)**2
         b1 = ((i+1)*dx)**2 + ((j+1)*dy)**2 + ((k+1)*dz)**2
         # in_sparse = np.logical_and(self.r0**2 <= b0, b1 <= self.r1**2)
-        in_sparse = np.logical_or(self.r0**2 <= b1, b0 <= self.r1**2)
+        in_sparse = np.logical_and(self.r0**2 <= b1, b0 <= self.r1**2)
 
         return np.logical_and(in_block, in_sparse)
 
@@ -93,13 +93,13 @@ class CellGrid_CartesianShell():
         # For clarity, let's do it this way:
         # i, j, k = self.position_to_cell(position)
         # return self.cell_in_bounds(i, j, k)
-        return in_shell(position)
+        return self.in_shell(position)
 
     def in_shell(self, position, eps = 1e-9):
         '''
         Returns whether a given position is inside the spherical shell
         '''
-        r = position.norm()
+        r = np.linalg.norm(position, axis=0)
         return np.all(np.logical_and(r > self.r0 * (1-eps), r < self.r1 * (1+eps)))
 
     def project_ray_to_bounds_square(self, start, dir):
@@ -113,10 +113,10 @@ class CellGrid_CartesianShell():
         dir = dir.normalized()
 
         # Compute the ray distance to intersection on each bounding plane
-        t_0p = (+ self.r0 - start) / dir
-        t_0m = (- self.r0 - start) / dir
-        t_1p = (+ self.r1 - start) / dir
-        t_1m = (- self.r1 - start) / dir
+        t0p = (+ self.r0 - start) / dir
+        t0m = (- self.r0 - start) / dir
+        t1p = (+ self.r1 - start) / dir
+        t1m = (- self.r1 - start) / dir
 
         # Join all the distances and get the shortest
         t = min(t for t in (*t0p, *t1p, *t0m, *t1m) if t >= 0 and self.in_bounds(start + t * dir))
@@ -157,7 +157,7 @@ class CellGrid_CartesianShell():
         pos = middle - np.outer(t, dir)
 
         # Make sure the positions are contained in the ray semi-segment
-        pos = [p for p in pos if np.dot(dir, p - start) >= 0]
+        pos = [Vector3(*p) for p in pos if np.dot(dir, p - start) >= 0]
 
         if len(pos)==0:
             print("Warning: ray does not intersect shell.", file=sys.stderr)

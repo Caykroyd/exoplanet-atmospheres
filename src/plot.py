@@ -42,17 +42,23 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 
 class Arrow3D(FancyArrowPatch):
-    # Source:
+    # Adapted from:
     # https://stackoverflow.com/questions/22867620/putting-arrowheads-on-vectors-in-matplotlibs-3d-plot
     def __init__(self, xs, ys, zs, *args, **kwargs):
-        FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+        super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
-    def draw(self, renderer):
+    def do_3d_projection(self):
         xs3d, ys3d, zs3d = self._verts3d
-        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
-        self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
-        FancyArrowPatch.draw(self, renderer)
+        xs, ys, zs = proj3d.proj_transform(
+            xs3d, ys3d, zs3d, self.axes.get_proj()
+        )
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+        return min(zs)
+
+    def draw(self, renderer):
+        self.do_3d_projection()
+        super().draw(renderer)
 
 def plot_arrow(ax, *args, **kwargs):
     a = Arrow3D(*args,**kwargs)
@@ -125,7 +131,8 @@ def plot_setup(fig, ax, scene):
 
     plot_axes(ax,center, Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), axis_length, linewidth=1, arrowstyle="-|>")
     # plot_arrow(ax, *zip(center, center+axis_length*e_s), mutation_scale=20, lw=1, arrowstyle="-|>", color="k")
-    ax.text(*(center+axis_length*e_s), 'Star', e_s, ha='left', va='bottom')
+    print('direction', (center+axis_length*e_s))
+    ax.text(*(center+axis_length*e_s), 'Star', zdir=tuple(e_s), ha='left', va='bottom')
 
     ax.set_title('Planet-Observer Setup')
     ax.set_xlabel('X [m]')
