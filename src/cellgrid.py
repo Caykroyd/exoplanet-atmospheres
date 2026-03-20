@@ -201,14 +201,14 @@ class CellGrid_CartesianShell():
             return Vector3([],[],[]), np.array([[],[],[]])
 
         # Get the cell indices of the start and end positions
-        i0, j0, k0 = self.position_to_cell(start)
-        i1, j1, k1 = self.position_to_cell(end)
+        i_s, j_s, k_s = self.position_to_cell(start)
+        i_e, j_e, k_e = self.position_to_cell(end)
 
         # Reorder so that the smallest is always first
         min_max = lambda a, b: (min(a, b), max(a,b))
-        (i0, i1) = min_max(i0, i1)
-        (j0, j1) = min_max(j0, j1)
-        (k0, k1) = min_max(k0, k1)
+        (i0, i1) = min_max(i_s, i_e)
+        (j0, j1) = min_max(j_s, j_e)
+        (k0, k1) = min_max(k_s, k_e)
 
         print("Positions", start, end, self.dx, start.norm(), end.norm())
         print((i0+1, i1+1), (j0+1, j1+1), (k0+1, k1+1))
@@ -232,16 +232,20 @@ class CellGrid_CartesianShell():
 
         # We now want to calculate the (i,j,k) indices of the cells.
         # Notice that each time the ray intersect with planes Px, Py, Pz,
-        # the corresponding index will increment
+        # the corresponding index will increment or decrement
+        sign_i = np.sign(i_e - i_s)
+        sign_j = np.sign(j_e - j_s)
+        sign_k = np.sign(k_e - k_s)
+
         diff = np.block([
-                [np.ones((i1-i0, 1)),  np.zeros((i1-i0, 1)), np.zeros((i1-i0, 1))],
-                [np.zeros((j1-j0, 1)), np.ones((j1-j0, 1)),  np.zeros((j1-j0, 1))],
-                [np.zeros((k1-k0, 1)), np.zeros((k1-k0, 1)), np.ones((k1-k0, 1))]]) # (I+J+K, 3)
+                [sign_i* np.ones((i1-i0, 1)),           np.zeros((i1-i0, 1)),          np.zeros((i1-i0, 1))],
+                [        np.zeros((j1-j0, 1)), sign_j * np.ones((j1-j0, 1)),           np.zeros((j1-j0, 1))],
+                [        np.zeros((k1-k0, 1)),          np.zeros((k1-k0, 1)), sign_k * np.ones((k1-k0, 1))]]) # (I+J+K, 3)
 
         if order.size > 0:
             diff = np.take_along_axis(diff, np.expand_dims(order, axis=1), axis = 0) # sorts diff acording to order
 
-        cells = np.array([i0, j0, k0]) + np.cumsum(diff, axis=0)
+        cells = np.array([i_s, j_s, k_s]) + np.cumsum(diff, axis=0)
 
         if len(order) > 0:
             # Now we filter cells that are not actually in the sparse array
@@ -257,12 +261,12 @@ class CellGrid_CartesianShell():
         if include_ray_edges:
             # Add start/end cells and positions
 
-            if(self.cell_in_bounds(i0, j0, k0)):
-                cells = np.concatenate([np.array([[i0, j0, k0]]), cells], axis=0)
+            if(self.cell_in_bounds(i_s, j_s, k_s)):
+                cells = np.concatenate([np.array([[i_s, j_s, k_s]]), cells], axis=0)
                 pos = np.concatenate([start[np.newaxis,:], pos], axis=0)
 
-            if(self.cell_in_bounds(i1, j1, k1)):
-                # cells = np.concatenate([cells, np.array([[i1, j1, k1]])], axis=0) # End cells are already included by construction!
+            if(self.cell_in_bounds(i_e, j_e, k_e)):
+                # cells = np.concatenate([cells, np.array([[i_e, j_e, k_e]])], axis=0) # End cells are already included by construction!
                 pos = np.concatenate([pos, end[np.newaxis,:]], axis=0)
 
         return cells.astype(np.int32), pos

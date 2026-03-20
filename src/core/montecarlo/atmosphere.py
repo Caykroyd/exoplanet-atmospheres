@@ -57,6 +57,9 @@ class ConstantBlockAtmosphere:
     def coef_absorption(self, position : Vector3, freq):
         return 0
 
+    def coef_total(self, position, freq):
+        return self.coef_scatter(freq) + self.coef_absorption(position, freq)
+
     def optical_depth_to_position(self, start_pos, dir, optical_depth, freq):
         '''
         This function supposes that the scatter coefficient is constant.

@@ -70,7 +70,8 @@ class MonteCarlo:
         if n_packets is None:
             n_packets = self.n_packets
 
-        self.freqs = np.linspace(*self.camera.frequency_band, self.n_freqs)
+        self.freq_bin_edges = np.linspace(*self.camera.frequency_band, self.n_freqs + 1)
+        self.freqs          = (self.freq_bin_edges[1:] + self.freq_bin_edges[:-1])/2
         self.S = self.grid.new_sparse_property(shape=(*self.freqs.shape, *self.grid.shape)) # source function
 
         packet = self.create_photon_packets(self.lightsource, n_packets)
@@ -105,6 +106,13 @@ class MonteCarlo:
         target = obs_pos
         aperture /= 1e3
 
+        freq_band = self.camera.frequency_band
+        dnu = (freq_band[1] - freq_band[0]) / self.n_freqs
+
+        # Monochromatic luminosity
+        luminosity_freq = lightsource.specific_luminosity(self.freqs)
+        luminosity_band = np.sum(luminosity_freq * dnu)
+
         for i in range(N):
 
             frequency = lightsource.sample_frequency(self.freqs)
@@ -126,7 +134,8 @@ class MonteCarlo:
             mu = np.dot(direction, (position - src_pos).normalized())
             P_emission = (1/2) * mu * (1-np.cos(aperture))
 
-            luminosity = lightsource.luminosity / N * P_emission
+            # monochromatic luminosity at frequency, normalised by bin width dnu
+            luminosity = luminosity_band / (N * dnu) * P_emission
 
             packet[i] = PhotonPacket(position, direction, frequency, luminosity)
 
@@ -163,14 +172,18 @@ class MonteCarlo:
         mu = np.einsum("i,ni->n", dir, (obs_pos - positions)/np.linalg.norm(obs_pos - positions, axis=-1)[...,np.newaxis])
         dV = self.grid.cell_volume
 
-        dS = ds * a_scat * photon.luminosity / (4*np.pi*dV) * 2*RayleighPhaseFunction.get(mu)
+        # dS = ds * a_scat * photon.luminosity / (4*np.pi*dV) * 2*RayleighPhaseFunction.get(mu)
+        # The equation on pdf was wrong. Following Dullemond (Ch 5, Eq. 5.27), we fix some typos
+        a_total  =  self.atmosphere.coef_total(positions, freq)
+        eta_scat = a_scat / a_total
+        
+        dS = ds * eta_scat * photon.luminosity / (4*np.pi*dV) * RayleighPhaseFunction.get(mu)
 
-        freq_bin = np.digitize(photon.frequency, self.freqs)
-        # freq_bin = np.clip(freq_bin, 0, len(self.freqs))
-        freq_bin = np.clip(freq_bin, 0, len(self.freqs) - 1)
+        freq_bins = np.digitize(photon.frequency, self.freq_bin_edges) - 1
+        freq_bins = np.clip(freq_bins, 0, self.n_freqs - 1)
 
         i, j, k = np.moveaxis(cells, -1, 0)
-        self.S[freq_bin, i, j, k] += dS
+        self.S[freq_bins, i, j, k] += dS
 
         photon.position = end
         photon.direction = self.random_scattered_direction(photon)

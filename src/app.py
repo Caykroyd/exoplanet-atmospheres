@@ -117,18 +117,23 @@ class SimulationTab(Tab):
 
         self.builder = builder
         self.plot = PyplotCanvas(self, width=5, height=4, dpi=100)
-
-        FieldGroup = lambda title, widget : WidgetGroup(QHBoxLayout(), [QLabel(title), widget])
+        self.plotter = None
 
         self.time_slider = QSlider(QtCore.Qt.Horizontal)
         self.time_slider.setMaximum(self.builder.get('planet','rotation_period'))
         self.time_slider.valueChanged.connect(self.set_time)
+
         self.play_button = QPushButton('Play')
         self.play_button.clicked.connect(self.on_play_pause)
 
+        self.run_button = QPushButton('Run')
+        self.run_button.clicked.connect(self.on_run)
+
+        controls = WidgetGroup(QHBoxLayout(), [self.play_button, self.run_button, None])
+
         self.bottombar = WidgetGroup(QVBoxLayout(),
             [self.time_slider,
-            self.play_button,
+            controls,
             None],
             )
 
@@ -139,14 +144,14 @@ class SimulationTab(Tab):
         subtitle1 = QLabel('Star')
         subtitle1.setFont(QFont("Arial", weight=QFont.Bold))
 
-        distance = FloatField((0,10,5), *builder.get_float_property('star', 'distance', scale=1/1.496e+11), self.refresh)
-        radius   = FloatField((0,1e10,5), *builder.get_float_property('star', 'radius', scale=1/6.957e+8), self.refresh)
+        distance = FloatField((0,10,5), *builder.get_float_property('star', 'distance', scale=1/1.496e+11), self.on_parameters_changed)
+        radius   = FloatField((0,1e10,5), *builder.get_float_property('star', 'radius', scale=1/6.957e+8), self.on_parameters_changed)
 
         subtitle2 = QLabel('Camera')
         subtitle2.setFont(QFont("Arial", weight=QFont.Bold))
 
-        pixel_size  = FloatField((0.01,1000,2), *builder.get_float_property('cam', 'pixel_size', scale=1e6), self.refresh)
-        view_angle = FloatField((0,180,2), *builder.get_property('cam', 'view_angle'), self.refresh)
+        pixel_size = FloatField((0.01,1000,2), *builder.get_float_property('cam', 'pixel_size', scale=1e6), self.on_parameters_changed)
+        view_angle = FloatField((0,180,2), *builder.get_property('cam', 'view_angle'), self.on_parameters_changed)
 
         self.sidebar = WidgetGroup(QVBoxLayout(),
             [
@@ -162,15 +167,28 @@ class SimulationTab(Tab):
             InspectorGroup('View Angle (°):', view_angle),
             None],
             )
-        flag = False
+
         super().__init__(name, QHBoxLayout(), [WidgetGroup(QVBoxLayout(), [self.plot, self.bottombar]), self.sidebar])
 
     def set_update_callback(self, func):
         self.plot.callback = func
+        self.plotter = getattr(func, 'plotter', getattr(func, '__self__', None))
+        if self.plotter is not None and hasattr(self.plotter, 'mark_dirty'):
+            self.plotter.mark_dirty()
         self.plot.refresh()
 
     def refresh(self):
         self.plot.refresh()
+
+    def on_parameters_changed(self):
+        if self.plotter is not None and hasattr(self.plotter, 'mark_dirty'):
+            self.plotter.mark_dirty()
+        self.refresh()
+
+    def on_run(self):
+        if self.plotter is not None and hasattr(self.plotter, 'request_run'):
+            self.plotter.request_run()
+        self.refresh()
 
     def set_timer(self, tick=240250, dt = 100):
         self.time = 0
@@ -182,6 +200,8 @@ class SimulationTab(Tab):
         self.time = time % self.time_slider.maximum()
         self.time_slider.setValue(self.time)
         self.builder.scene.set_time(self.time)
+        if self.plotter is not None and hasattr(self.plotter, 'mark_dirty'):
+            self.plotter.mark_dirty()
         self.refresh()
 
     def pause(self):
@@ -270,9 +290,9 @@ if __name__=='__main__':
         lambda fig, ax : plot_star_trajectory_on_canvas(fig, ax, scene)
         )
     p = fluxmap_plotter()
-    window.tabs['Simulation'].set_update_callback(
-        lambda fig, ax : p(fig, ax, scene)
-        )
+    simulation_callback = lambda fig, ax : p(fig, ax, scene)
+    simulation_callback.plotter = p
+    window.tabs['Simulation'].set_update_callback(simulation_callback)
     window.tabs['Simulation'].set_timer()
     window.tabs['Light Spectrum'].set_update_callback(
         lambda fig, ax : plot_spectrum(fig, ax, scene, range=(1e8,0.5e16))

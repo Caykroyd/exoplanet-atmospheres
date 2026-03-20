@@ -19,11 +19,15 @@ class WidgetGroup(QWidget):
         self.setLayout(layout)
 
 class DoubleValidator(QDoubleValidator):
-    def fixup(self, value):
-        value = float(value)
+    def fixup(self, text):
+        text = text.strip()
+        value, ok = self.locale().toDouble(text)
+        if not ok:
+            return ''
+        # value = float(text)
         value = np.round(value, decimals=self.decimals())
-        value = np.clip(value, self.bottom(), self.top())
-        return str(value.item())
+        value = np.clip(value, self.bottom(), self.top())        
+        return str(value)
 
 class EditBox(QLineEdit):
     '''

@@ -8,7 +8,7 @@ def radtransf(tau, I0, S):
 
     dI = S * (np.exp(-delta_tau[1:]) - np.exp(-delta_tau[:-1]))
 
-    return I0 * np.exp(-delta_tau[0]) #+ np.sum(dI, axis=0)
+    return I0 * np.exp(-delta_tau[0]) + np.sum(dI, axis=0)
 
 def radtransf_ma(I0, S, tau, cells_in_ray):
     '''
@@ -25,7 +25,7 @@ def radtransf_ma(I0, S, tau, cells_in_ray):
     assert tau.shape == (M, N, CELLS+1, FREQ),f"Shapes do not correspond! {tau.shape}, {(M, N, CELLS+1, FREQ)}"
     assert cells_in_ray.shape == (M, N),f"Shapes do not correspond! {cells_in_ray.shape}, {(M, N)}"
 
-    dI = S * np.diff(np.exp(-tau), axis = -2)
+    dI = - S * np.diff(np.exp(-tau), axis = -2)
 
     # take the elements (cells_in_ray-1) from tau.
     # delta_tau = tau[(*np.ix_(np.arange(M), np.arange(N)), cells_in_ray, None)].squeeze(axis=-2)
@@ -40,4 +40,5 @@ def radtransf_ma(I0, S, tau, cells_in_ray):
     print('\t', 'dtau', f'{np.abs(np.diff(np.exp(-tau), axis = -2)).max()}')
     print('\t', 'S', f'{np.abs(S).max()}')
     print('\t', 'dI', f'{np.abs(dI).max()}')
+
     return I0 * np.exp(-delta_tau) + np.sum(dI, axis=-2)

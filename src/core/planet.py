@@ -6,6 +6,9 @@ import numpy as np
 
 class Planet():
     '''
+    Parameters:
+        - season: float in [0, 4]
+        - tilt: angle in degrees
     '''
     def __init__(self, season : float = 0, tilt : float = 0, radius : float = 1, rotation_period : float = 0):
 
@@ -24,7 +27,6 @@ class Planet():
     @property
     def season_rot(self):
         # to do: check this is correct
-        print('season', self.season)
         Rz = Rotation.from_rotvec(Vector3(0,0,1) * self.season * np.pi/2)
         Rx = Rotation.from_rotvec(self.tilt_axis * np.deg2rad(self.tilt))
         return Rz * Rx
@@ -35,13 +37,14 @@ class Planet():
 
     @property
     def angular_velocity(self):
+        if self.rotation_period == 0:
+            return 0.0
         return 2 * np.pi / self.rotation_period
 
     def update(self, time, dt):
-        if self.angular_velocity != 0:
-            angular_position = self.angular_velocity * time
-            day_rot = Rotation.from_rotvec(Vector3(0,0,1) * angular_position)
-            self.transform.local_rotation =  self.R * day_rot
+        angular_position = self.angular_velocity * time
+        day_rot = Rotation.from_rotvec(Vector3(0,0,1) * angular_position)
+        self.transform.local_rotation =  self.R @ day_rot
 
     def surface_point(self, latitude : float, longitude : float):
         '''
@@ -54,6 +57,6 @@ class Planet():
         e_r, e_theta, e_phi = coords.spherical_basis(self.radius, theta, phi)
 
         r = coords.from_spherical(self.radius, theta, phi)
-        q = Rotation.from_canonical_to_basis(e_phi, -e_theta, e_r) # right-handed basis
+        q = Rotation.from_basis(e_phi, -e_theta, e_r) # right-handed basis
 
         return Transform(r, q, parent = self.transform)

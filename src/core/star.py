@@ -28,6 +28,9 @@ class Star:
     def spectrum(self, nu):
         return blackbody(self.temperature, nu)
 
+    def specific_luminosity(self, freq):
+        return 4 * np.pi**2 * self.radius**2 * self.spectrum(freq)
+
     def sample_frequency(self, freqs):
 
         f = self.spectrum(freqs)

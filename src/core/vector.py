@@ -1,23 +1,23 @@
 import numpy as np
-import scipy.spatial.transform
+import scipy.spatial.transform as scipyt
 
 class Vector3(np.ndarray):
     '''
-    Override of nd.array class for 3D vectors.
+    Override of nd.array class for 3D row vectors.
     '''
     def __new__(cls, *args):
         if len(args) == 1:
             arr = np.asarray(args[0])
-            if arr.shape[0] != 3:
-                raise ValueError(f"Expected first dimension to have size 3, got shape {arr.shape}")
+            if arr.shape[-1] != 3:
+                raise ValueError(f"Expected last dimension to have size 3, got shape {arr.shape}")
             obj = arr.view(cls)
 
         elif len(args) == 3:
             x, y, z = args
-            obj = np.stack([x, y, z], axis=0).view(cls)
+            obj = np.stack([x, y, z], axis=-1).view(cls)
 
         else:
-            raise TypeError("Vector3 expects either (x, y, z) or (array_like with shape (3, ...))")
+            raise TypeError("Vector3 expects either (x, y, z) or array with shape (..., 3).")
 
         return obj
 
@@ -26,68 +26,98 @@ class Vector3(np.ndarray):
 
     @property
     def x(self):
-        return self[0]
+        return self[..., 0]
     @property
     def y(self):
-        return self[1]
+        return self[..., 1]
     @property
     def z(self):
-        return self[2]
+        return self[..., 2]
 
     def norm(self):
-        norm = np.linalg.norm(self, axis=0)
+        norm = np.linalg.norm(self, axis=-1)
         return norm
 
     def normalized(self):
-        norm = self.norm()
+        norm = self.norm()[..., None]
         assert not np.any(np.isclose(norm, 0))
         return self / norm
 
     @staticmethod
-    def project(u, dir):
+    def project(u : Vector3, dir : Vector3):
         dir = dir.normalized()
-        return np.dot(u, dir) * dir
+        dot = np.einsum('...i,...i->...', u, dir)
+        return dot[..., None] * dir
 
     @staticmethod
-    def angle(self, u, v):
-        return np.arccos(np.dot(u.normalized(), v.normalized()))
+    def angle(u, v):
+        dot = np.einsum('...i,...i->...', u.normalized(), v.normalized())
+        return np.arccos(dot)
 
     @staticmethod
     def zero():
         return Vector3(0,0,0)
 
-    @staticmethod
-    def unit(x, y, z):
-        return Vector3(x, y, z).normalized()
+    @classmethod
+    def unit(cls, *args):
+        return cls(*args).normalized()
 
-class Rotation(scipy.spatial.transform.Rotation):
+class Rotation():
     '''
     Override of scipy class for representing rotations.
     '''
-    @staticmethod
-    def from_canonical_to_basis(e_x, e_y, e_z):
+    def __init__(self, rot):
+        if not isinstance(rot, scipyt.Rotation):
+            raise TypeError(f'Expected scipy Rotation, got {type(rot)!r}')
+        self.data = rot
+
+    @classmethod
+    def from_quat(cls, quat, *args, **kwargs):
+        return cls(scipyt.Rotation.from_quat(quat, *args, **kwargs))
+
+    @classmethod
+    def from_rotvec(cls, rotvec, *args, **kwargs):
+        return cls(scipyt.Rotation.from_rotvec(rotvec, *args, **kwargs))
+
+    @classmethod
+    def from_euler(cls, seq, angles, *args, **kwargs):
+        return cls(scipyt.Rotation.from_euler(seq, angles, *args, **kwargs))
+
+    @classmethod
+    def from_matrix(cls, matrix, *args, **kwargs):
+        return cls(scipyt.Rotation.from_matrix(matrix, *args, **kwargs))
+
+    @classmethod
+    def from_basis(cls, e_x, e_y, e_z):
         e_x = e_x.normalized()
         e_y = e_y.normalized()
         e_z = e_z.normalized()
         assert np.allclose([e_x @ e_y, e_y @ e_z, e_z @ e_x], 0), 'Basis is not orthogonal!'
         M = np.stack([e_x, e_y, e_z], axis=-1)
-        return super(Rotation,Rotation).from_matrix(M)
+        assert np.linalg.det(M) > 0, "Basis is left-handed, not a proper rotation!"
+        return cls.from_matrix(M)
 
-    @staticmethod
-    def from_basis_to_canonical(e_x, e_y, e_z):
-        return Rotation.from_canonical_to_basis(e_x, e_y, e_z).inv()
+    @classmethod
+    def identity(cls, *args, **kwargs):
+        return cls(scipyt.Rotation.identity(*args, **kwargs))
 
-    def apply(self, vector : Vector3):
-        u = super().apply(vector)
-        shape = u.shape
-        if(len(shape) < 2):
-            return Vector3(*u)
-        return u
+    def inv(self):
+        return Rotation(self.data.inv())
 
+    def apply(self, vector : Vector3, inverse = False):
+        u = self.data.apply(vector, inverse)
+        return Vector3(u)
 
     def __call__(self, vector : Vector3):
         return self.apply(vector)
 
+    def __matmul__(self, other):        
+        if isinstance(other, Rotation):
+            return self.__class__(self.data * other.data)
+        if isinstance(other, Vector3):
+            return self.apply(other)
+        return NotImplemented
+    
 def ray_intersects_sphere(origin, dir, center, radius):
     dir = dir.normalized()
     s = center - origin

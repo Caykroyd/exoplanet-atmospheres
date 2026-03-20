@@ -244,10 +244,44 @@ def plot_spectrum(fig, ax, scene, range, res=10**3):
     band = (freq >= freq_min) & (freq <= freq_max)
     ax.fill_between(freq, B, where=band, color='r')
 
-def fluxmap_plotter():
-    setup = True # define the closure
+class FluxmapPlotter:
+    def __init__(self):
+        self._run_requested = False
+        self._dirty = True
+        self._flux = None
+        self._lim = None
+        self._digits = None
+        self._colorbar = None
 
-    def plot_fluxmap(fig, ax, scene):
+    def request_run(self):
+        self._run_requested = True
+
+    def mark_dirty(self):
+        self._dirty = True
+        self._run_requested = False
+
+    def _draw_message(self, ax, message):
+        ax.set_axis_off()
+        ax.text(0.5, 0.5, message, ha='center', va='center', transform=ax.transAxes)
+
+    def _draw_flux(self, fig, ax, rgb=True):
+        ax.set_axis_on()
+
+        ax.set_title(rf'Flux seen by camera [$10^{{ {self._digits} }} W \: m^{{-2}}$]')
+        ax.set_xlabel('X [px]')
+        ax.set_ylabel('Y [px]')
+
+        if rgb:
+            ax.imshow(self._flux, extent=[-self._lim, self._lim, -self._lim, self._lim], vmin=0, origin='lower')
+        else:
+            intensity = np.linalg.norm(self._flux, axis=-1) # plot image brightness for now
+            cmap = ax.imshow(intensity, extent=[-self._lim, self._lim, -self._lim, self._lim], cmap='gray', vmin=0, origin='lower')
+            
+            if self._colorbar is not None:
+                self._colorbar.remove()
+            self._colorbar = fig.colorbar(cmap, ax=ax)
+
+    def _compute_flux(self, scene):
         cam, montecarlo, star, planet, atmosphere = \
             itemgetter('cam', 'montecarlo', 'star', 'planet', 'atmosphere')(scene.objs)
 
@@ -280,19 +314,19 @@ def fluxmap_plotter():
                 N = len(arrays)
                 M = np.max([a.shape for a in arrays], axis=0)
                 out   = np.zeros((N, *M), dtype=dtype)
-                mask   = np.ones((N, *M), dtype=np.bool)
+                mask   = np.ones((N, *M), dtype=bool)
                 shapes = np.zeros((N, len(M)), dtype=np.int32)
                 for i, arr in enumerate(arrays):
                     shapes[i] = arr.shape
                     out[(i,*(slice(j) for j in shapes[i]))] = arrays[i]
-                    mask[(i,*(slice(j) for j in shapes[i]))] = np.zeros_like(arrays[i], dtype=np.bool)
+                    mask[(i,*(slice(j) for j in shapes[i]))] = np.zeros_like(arrays[i], dtype=bool)
                 return ma.masked_array(out, mask), shapes
 
-            cells     = (np.flip(cell, axis=-2) for cell in cells)
-            positions = (np.flip(pos, axis=-2)  for pos in positions)
+            cells     = [np.flip(cell, axis=-2) for cell in cells]
+            positions = [np.flip(pos,  axis=-2) for pos in positions]
 
-            cells, block_shapes = stack_uneven(list(cells), dtype=np.int32)
-            pos, _              = stack_uneven(list(positions))
+            cells, block_shapes = stack_uneven(cells, dtype=np.int32)
+            pos, _              = stack_uneven(positions)
 
             M, N = mask.shape
             D = cells.shape[-2]
@@ -317,7 +351,10 @@ def fluxmap_plotter():
             tau   = depth[...,np.newaxis] * atmosphere.coef_scatter(freq)
 
             # Take the array of frequencies and "snap" to our discrete grid of frequencies available from the Monte Carlo
-            freq_bins = np.clip(np.digitize(freq, montecarlo.freqs), 0, len(montecarlo.freqs)-1)
+            # freq_bins = np.clip(np.digitize(freq, montecarlo.freqs), 0, len(montecarlo.freqs)-1)
+
+            freq_bins = np.digitize(freq, montecarlo.freq_bin_edges) - 1
+            freq_bins = np.clip(freq_bins, 0, montecarlo.n_freqs - 1)
 
             S = source[freq_bins, i, j, k]
 
@@ -333,18 +370,25 @@ def fluxmap_plotter():
 
         F = cam.capture(intensity)
 
-        F = np.moveaxis(F,0,-1)
+        self._flux = np.moveaxis(F, 0, -1)
+        self._lim = cam.canvas_width / 2
+        self._digits = int(np.ceil(np.log10(cam.saturation)))
+        self._dirty = False
+        self._run_requested = False
 
-        digits = int(np.ceil(np.log10(cam.saturation)))
-        ax.set_title(rf'Flux seen by camera [$10^{{ {digits} }} W \: m^{{-2}}$]')
-        lim = cam.canvas_width/2
-        cmap = ax.imshow(F,extent=[-lim,lim,-lim,lim], cmap='gray',vmin=0, origin='lower')
-        ax.set_xlabel('X [px]')
-        ax.set_ylabel('Y [px]')
+    def __call__(self, fig, ax, scene):
+        if self._run_requested:
+            self._compute_flux(scene)
 
-        nonlocal setup
-        if setup:
-            fig.colorbar(cmap)
-            setup = False
+        if self._dirty or self._flux is None:
+            if self._colorbar is not None:
+                self._colorbar.remove()
+                self._colorbar = None
+            self._draw_message(ax, 'Press Run to execute the Monte Carlo simulation.')
+            return
 
-    return plot_fluxmap
+        self._draw_flux(fig, ax)
+
+
+def fluxmap_plotter():
+    return FluxmapPlotter()

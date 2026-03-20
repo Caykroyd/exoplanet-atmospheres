@@ -1,7 +1,7 @@
 star:
   name: Sun
   params:
-    distance: 1.496e+10 # m
+    distance: 1.496e+11 # m
     radius: 6.957e+9 # m # default = 10 solar radii
     temperature: 5778 # m
 
@@ -22,9 +22,9 @@ atmosphere:
       rayleigh_cross_section: 5.1e-31 # m2, at wavelength 532 nm
 
 montecarlo:
-  n_packets: 10000
+  n_packets: 1000
   n_freqs: 100
-  grid_blocks: [5000, 50000, 50000]
+  grid_blocks: [50, 100, 100]
 
 observer:
   latitude: 10 # degrees, France = 40
@@ -34,6 +34,6 @@ camera:
   focal_length: 35.e-3 # m
   pixel_size: 2.e-4 # m
   view_angle: 30 # degrees
-  saturation: 1.e-15 # W/m
+  saturation: 1.e-5 # W/m # 1e-15
   near_clipping_distance: 1 # m
   frequency_band: [400.0e+12, 790.0e+12] # Hz, visible light
