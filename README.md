@@ -2,13 +2,10 @@
 
 An interactive Python application for simulating how a star would appear through a planetary atmosphere using Monte Carlo radiative transfer.
 
-This project models an observer standing on the surface of a planet and looks at how incoming starlight is scattered by the atmosphere before reaching the camera. The simulation estimates the atmospheric source function with a Monte Carlo photon-packet method, then performs ray tracing to render the observed sky and compute spectra.
+This project models an observer standing on the surface of a planet and looks at how incoming starlight is scattered by the atmosphere before reaching the camera. The simulation estimates the atmospheric source function with a Monte Carlo photon-packet method, then performs ray tracing to render the observed sky and compute spectra. We implement an interactive desktop UI built with `PyQt5`.
 
-<center>
-<img src="docs/img/exoplanets.jpeg" alt="Blue sky render" width="400" />
-</center>
+The project is based on Dullemond's lectures [Radiative transfer in astrophysics](https://www.ita.uni-heidelberg.de/~dullemond/lectures/radtrans_2012/index.shtml).
 
-We implement an interactive desktop UI built with `PyQt5`. The project is based on Dullemond's lectures [Radiative transfer in astrophysics](https://www.ita.uni-heidelberg.de/~dullemond/lectures/radtrans_2012/index.shtml).
 
 ## Overview
 
@@ -25,8 +22,11 @@ Solving radiative transfer in planetary atmospheres is challenging because scatt
    - The transfer equation is integrated through the atmosphere
    - The resulting spectral intensity is integrated into RGB to produce an image
 
-The implementation currently focuses on a simplified atmosphere dominated by **Rayleigh scattering**, which is enough to produce a blue-sky image.
+The implementation currently focuses on a simplified atmosphere dominated by _Rayleigh scattering_, which is enough to produce a blue-sky image.
 
+<center>
+<img src="docs/img/exoplanets.jpeg" alt="Blue sky render" width="400" />
+</center>
 
 # Installation
 
@@ -38,7 +38,7 @@ We expect Python 3.14 or later. The following dependencies must be installed:
 - [pyqt](https://www.riverbankcomputing.com/software/pyqt/)
 - [pyyaml](https://pyyaml.org/wiki/PyYAML)
 
-A new environment can be setup with the following commands
+A new anaconda environment can be setup with the following commands
 
 `conda create -n exoplanets python=3.14`
 
