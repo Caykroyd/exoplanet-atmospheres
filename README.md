@@ -20,7 +20,7 @@ Solving radiative transfer in planetary atmospheres is challenging because scatt
 2. **Ray tracing & formal solution**
    - Rays are cast from the observer's camera through each pixel
    - The transfer equation is integrated through the atmosphere
-   - The resulting spectral intensity is integrated into RGB to produce an image
+   - The resulting intensity spectrum is converted into RGB through a visual model to produce an image
 
 The implementation currently focuses on a simplified atmosphere dominated by _Rayleigh scattering_, which is enough to produce a blue-sky image.
 
